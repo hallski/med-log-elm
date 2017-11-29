@@ -2,7 +2,7 @@ module MedLog exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Http
@@ -20,6 +20,7 @@ backendUrl = "http://localhost:9090"
 type Route
     = RootRoute
     | AddEntryRoute
+    | NewEntryRoute
     | NotFoundRoute
 
 type alias Model =
@@ -67,14 +68,18 @@ parseLocation location =
         Nothing ->
             NotFoundRoute
 
+
 -- Update
 
 type Msg
     = NewEntries (Result Http.Error (List Entry))
     | NewUser (Result Http.Error String)
+    | OnNewEntry
     | Logout
     | LogoutUserDone (Result Http.Error String)
     | OnLocationChange (Location)
+    | OnSliderChange (String)
+    | OnTextChange (String)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -121,6 +126,13 @@ update msg model =
                 fetchCommand = if isLoggedIn model then getEntries else Cmd.none
             in
                 ( { model | route = newRoute }, fetchCommand )
+        OnNewEntry ->
+            ( { model | route = NewEntryRoute }, Cmd.none )
+        OnSliderChange value ->
+            ( model, Cmd.none )
+        OnTextChange value ->
+            ( model, Cmd.none )
+
 
 -- Commands
 getUser : Cmd Msg
@@ -165,8 +177,11 @@ view : Model -> Html Msg
 view model =
     let
         page = if isLoggedIn model then
-                    viewLoggedIn model
-                else
+                    if model.route == RootRoute then
+                        viewLoggedIn model
+                    else
+                        viewNewEntry (Entry "000" 8.0 "" 80 0)
+          else
                     viewWelcome
     in
         viewTemplate model page
@@ -193,6 +208,38 @@ viewWelcome =
 
 viewLoggedIn : Model -> Html Msg
 viewLoggedIn model =
+    if List.length model.entries == 0 then
+        viewNoEntries
+    else
+        viewShowEntries model.entries
+
+viewNoEntries : Html Msg
+viewNoEntries =
+    div [ class "jumbotron" ]
+        [ div [ class "display-5 text-center" ] [ text "You have not made any log entries yet!" ]
+        , div [ class "text-center" ]
+              [ button [ type_ "button", class "btn btn-primary", onClick OnNewEntry ]
+                       [ text "Add your first log-entry!" ]
+              ]
+        ]
+
+viewShowEntries : List Entry -> Html Msg
+viewShowEntries entries =
+    div []
+        [ nav [ class "navbar nav-fill justify-content-between"]
+              [ -- PageSelector
+                ul [ class "nav nav-pills" ]
+                   [ li [ class "nav-item" ]
+                        [ button [ type_ "button", class "btn btn-outline-secondary", onClick OnNewEntry ]
+                                 [ text "Add New" ]
+                        ]
+                   ]
+              ]
+        , div [] [ viewEntryTable entries ]
+        ]
+
+viewEntryTable : List Entry -> Html Msg
+viewEntryTable entries =
     let
         headers = [ "Hours of sleep"
                   , "Resting pulse"
@@ -201,7 +248,7 @@ viewLoggedIn model =
                   ]
         tableHeader = \str -> th [] [ text str ]
         h = thead [] [ tr [] (List.map tableHeader headers) ]
-        rows = h :: List.map viewEntryRow model.entries
+        rows = h :: List.map viewEntryRow entries
     in
         table [ class "table" ] rows
 
@@ -220,14 +267,78 @@ homeLinkButton =
 
 loginButton : Model -> Html Msg
 loginButton model =
-    case model.user of
-        Just _ ->
-            button [ class "btn btn-outline-secondary my-2 my-sm-0" , onClick Logout ]
-                   [ text "Logout" ]
-        Nothing ->
-            a [ class "btn btn-success my-2 my-sm-0" , href (backendUrl ++ "/login") ]
-              [ text "Login" ]
+    if isLoggedIn model then
+        button [ class "btn btn-outline-secondary my-2 my-sm-0" , onClick Logout ]
+               [ text "Logout" ]
+    else
+        a [ class "btn btn-success my-2 my-sm-0" , href (backendUrl ++ "/login") ]
+          [ text "Login" ]
 
+viewNewEntry : Entry -> Html Msg
+viewNewEntry entry =
+    div [ class "container" ]
+        [ Html.form
+            []
+            [ div [ class "display-4" ] [ text "Input your Info" ]
+            , viewSliderInput
+                "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
+                0 12 0.5 OnSliderChange
+            , viewSliderInput
+                "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
+                40 110 1 OnSliderChange
+            , viewTextInput
+                "Tag" "tag" entry.tag OnTextChange
+            , span [ class "float-left" ]
+                   [ a [ class "btn btn-secondary", href "/" ]
+                       [ text "Cancel" ]
+                   ]
+            , span [ class "float-right" ]
+                   [ input [ type_ "submit"
+                           , disabled False
+                           , value "Save"
+                           , class "btn btn-primary"
+                           ]
+                           []
+                   ]
+            ]
+        ]
+
+
+viewTextInput : String -> String -> String -> (String -> msg) -> Html msg
+viewTextInput label n v onInputMsg =
+    div [ class "input-group" ]
+        [ span [ class "input-group-addon col-3 text-md-center" ] [ text label ]
+        , input
+            [ type_ "text"
+            , class "form-control col-9"
+            , name n
+            , value v
+            , onInput onInputMsg
+            ]
+            []
+        ]
+
+viewSliderInput : String -> String -> Float -> Float -> Float -> Float -> (String -> msg) -> Html msg
+viewSliderInput label n v minValue maxValue stepValue onInputMsg =
+    div [ class "input-group" ]
+        [ span [ class "input-group-addon col-3 text-md-center" ] [ text label ]
+        , div [ class "form-control col-9" ]
+              [ span [ style [ ("marginRight", "10px") ]] [ text (toString v) ]
+              , input
+                [ style [ ("width", "100%") ]
+                , type_ "range"
+                , Html.Attributes.min (toString minValue)
+                , Html.Attributes.max (toString maxValue)
+                , step (toString stepValue)
+                , name n
+                , value (toString v)
+                , onInput onInputMsg
+                ]
+                []
+
+              ]
+
+        ]
 -- Main
 
 main : Program Never Model Msg
