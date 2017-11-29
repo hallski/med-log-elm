@@ -2,6 +2,7 @@ module HttpHelpers exposing (..)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, field, succeed)
+import Json.Encode as Encode exposing (Value)
 
 requestWithCredentials : String -> String -> Decoder a -> Http.Request a
 requestWithCredentials method url decoder =
@@ -21,3 +22,15 @@ getWithCredentials = requestWithCredentials "GET"
 
 deleteWithCredentials : String -> Decoder a -> Http.Request a
 deleteWithCredentials = requestWithCredentials "DELETE"
+
+postWithCredentials : String -> Encode.Value -> Decoder a -> Http.Request a
+postWithCredentials url body decoder =
+    Http.request
+        { method = "post"
+        , headers = []
+        , url = url
+        , body = Http.jsonBody body
+        , expect = Http.expectJson decoder
+        , timeout = Nothing
+        , withCredentials = True
+        }

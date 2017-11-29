@@ -5,11 +5,13 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 
 import Json.Decode as Decode exposing (Decoder, field, succeed)
+import Json.Encode as Encode
 import Http
 import Navigation exposing (Location)
 import UrlParser as UP
-
+import Time
 import HttpHelpers exposing (..)
+import Task
 
 backendUrl : String
 backendUrl = "http://localhost:9090"
@@ -27,7 +29,19 @@ type alias Model =
     { user : Maybe String
     , entries : List Entry
     , route : Route
+    , newEntry : NewEntry
     }
+
+type alias NewEntry =
+    { hoursOfSleep : Float
+    , tag : String
+    , restingPulse : Int
+    , timestamp: Int
+    }
+
+defaultNewEntry : NewEntry
+defaultNewEntry =
+    NewEntry 8 "" 80 0
 
 type alias Entry =
     { id: String
@@ -42,7 +56,7 @@ init location =
     let
         currentRoute = parseLocation location
     in
-        ( Model Nothing [] currentRoute, getUser )
+        ( Model Nothing [] currentRoute defaultNewEntry, getUser )
 
 isLoggedIn : Model -> Bool
 isLoggedIn model =
@@ -78,8 +92,13 @@ type Msg
     | Logout
     | LogoutUserDone (Result Http.Error String)
     | OnLocationChange (Location)
-    | OnSliderChange (String)
-    | OnTextChange (String)
+    | NewEntryHoursOfSleepChange (String)
+    | NewEntryRestingPulseChange (String)
+    | NewEntryTagChange (String)
+    | NewEntrySave
+    | NewEntryTimestamp (Time.Time)
+    | NewEntrySaveDone (Result Http.Error String)
+    | NewEntryCancel
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -127,14 +146,68 @@ update msg model =
             in
                 ( { model | route = newRoute }, fetchCommand )
         OnNewEntry ->
-            ( { model | route = NewEntryRoute }, Cmd.none )
-        OnSliderChange value ->
-            ( model, Cmd.none )
-        OnTextChange value ->
-            ( model, Cmd.none )
+            ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, getTimestamp )
+        NewEntryHoursOfSleepChange value ->
+            let
+                oldEntry = model.newEntry
+                newEntry = { oldEntry | hoursOfSleep = parseFloat value }
+            in
+                ( { model | newEntry = newEntry }, Cmd.none )
+        NewEntryRestingPulseChange value ->
+            let
+                oldEntry = model.newEntry
+                newEntry = { oldEntry | restingPulse = parseInt value }
+            in
+                ( { model | newEntry = newEntry }, Cmd.none )
+        NewEntryTagChange value ->
+            let
+                oldEntry = model.newEntry
+                newEntry = { oldEntry | tag = value }
+            in
+                ( { model | newEntry = newEntry }, Cmd.none )
+        NewEntryTimestamp time ->
+            let
+                oldEntry = model.newEntry
+                timestamp = round (Time.inSeconds time)
+                newEntry = { oldEntry | timestamp = timestamp }
+            in
+                ( { model | newEntry = newEntry }, Cmd.none )
+        NewEntrySave ->
+            let
+                newEntry = model.newEntry
+            in
+                ( { model | newEntry = defaultNewEntry }, saveNewEntry newEntry)
+        NewEntrySaveDone (Ok result) ->
+            ( { model | route = RootRoute }, getEntries )
+        NewEntrySaveDone (Err error) ->
+            case error of
+                Http.BadStatus msg ->
+                    let
+                        _ = Debug.log "Error: " msg
+                    in
+                        ( { model | user = Nothing }, Cmd.none )
 
+                Http.BadPayload msg _ ->
+                    let
+                        _ = Debug.log "Error: " msg
+                    in
+                        ( { model | user = Nothing }, Cmd.none )
+                _ ->
+                    ( { model | user = Nothing }, Cmd.none )
+        NewEntryCancel ->
+            ( { model | route = RootRoute, newEntry = defaultNewEntry }, Cmd.none )
+
+parseFloat : String -> Float
+parseFloat = Result.withDefault 0.0 << String.toFloat
+
+parseInt : String -> Int
+parseInt = Result.withDefault 0 << String.toInt
 
 -- Commands
+getTimestamp : Cmd Msg
+getTimestamp =
+    Task.perform NewEntryTimestamp Time.now
+
 getUser : Cmd Msg
 getUser =
     userDecoder
@@ -153,6 +226,21 @@ getEntries =
         |> getWithCredentials (backendUrl ++ "/entries")
         |> Http.send NewEntries
 
+saveNewEntry : NewEntry -> Cmd Msg
+saveNewEntry entry =
+    let
+        body =
+            Encode.object
+                [ ("hoursOfSleep", Encode.float entry.hoursOfSleep)
+                , ("restingPulse", Encode.int entry.restingPulse)
+                , ("tag", Encode.string entry.tag)
+                , ("timestamp", Encode.int entry.timestamp)
+                ]
+    in
+        saveNewEntryDecoder
+            |> postWithCredentials (backendUrl ++ "/entries") body
+            |> Http.send NewEntrySaveDone
+
 userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
@@ -170,6 +258,9 @@ entryDecoder =
         (field "restingPulse" Decode.int)
         (field "timestamp" Decode.int)
 
+saveNewEntryDecoder : Decoder String
+saveNewEntryDecoder =
+    Decode.field "id" Decode.string
 
 -- View
 
@@ -180,7 +271,7 @@ view model =
                     if model.route == RootRoute then
                         viewLoggedIn model
                     else
-                        viewNewEntry (Entry "000" 8.0 "" 80 0)
+                        viewNewEntry model.newEntry
           else
                     viewWelcome
     in
@@ -274,34 +365,27 @@ loginButton model =
         a [ class "btn btn-success my-2 my-sm-0" , href (backendUrl ++ "/login") ]
           [ text "Login" ]
 
-viewNewEntry : Entry -> Html Msg
+viewNewEntry : NewEntry -> Html Msg
 viewNewEntry entry =
     div [ class "container" ]
-        [ Html.form
-            []
-            [ div [ class "display-4" ] [ text "Input your Info" ]
+        [ div [ class "display-4" ] [ text "Input your Info" ]
             , viewSliderInput
                 "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
-                0 12 0.5 OnSliderChange
+                0 12 0.5 NewEntryHoursOfSleepChange
             , viewSliderInput
                 "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
-                40 110 1 OnSliderChange
+                40 110 1 NewEntryRestingPulseChange
             , viewTextInput
-                "Tag" "tag" entry.tag OnTextChange
+                "Tag" "tag" entry.tag NewEntryTagChange
             , span [ class "float-left" ]
-                   [ a [ class "btn btn-secondary", href "/" ]
+                   [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
                        [ text "Cancel" ]
                    ]
             , span [ class "float-right" ]
-                   [ input [ type_ "submit"
-                           , disabled False
-                           , value "Save"
-                           , class "btn btn-primary"
-                           ]
-                           []
+                   [ button [ class "btn btn-primary", onClick NewEntrySave ]
+                            [ text "Save" ]
                    ]
             ]
-        ]
 
 
 viewTextInput : String -> String -> String -> (String -> msg) -> Html msg
@@ -335,9 +419,7 @@ viewSliderInput label n v minValue maxValue stepValue onInputMsg =
                 , onInput onInputMsg
                 ]
                 []
-
               ]
-
         ]
 -- Main
 
