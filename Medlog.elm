@@ -6,6 +6,8 @@ import Html.Events exposing (onClick)
 
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Http
+import Navigation exposing (Location)
+import UrlParser as UP
 
 
 backendUrl : String
@@ -14,9 +16,15 @@ backendUrl = "http://localhost:9090"
 
 -- Model
 
+type Route
+    = RootRoute
+    | AddEntryRoute
+    | NotFoundRoute
+
 type alias Model =
     { user : Maybe String
     , entries : List Entry
+    , route : Route
     }
 
 type alias Entry =
@@ -27,10 +35,30 @@ type alias Entry =
     , timeStamp : Int
     }
 
-init : ( Model, Cmd Msg )
-init =
-    ( Model (Just "foo") [], getUser )
+init : Location -> ( Model, Cmd Msg )
+init location =
+    let
+        currentRoute = parseLocation location
+    in
+        ( Model Nothing [] currentRoute, getUser )
 
+
+-- Routing
+
+matchers : UP.Parser (Route -> a) a
+matchers =
+    UP.oneOf
+        [ UP.map RootRoute UP.top
+        , UP.map AddEntryRoute (UP.s "addEntry")
+        ]
+
+parseLocation : Location -> Route
+parseLocation location =
+    case (UP.parseHash matchers location) of
+        Just route ->
+            route
+        Nothing ->
+            NotFoundRoute
 
 -- Update
 
@@ -40,6 +68,7 @@ type Msg
     | Login
     | Logout
     | LogoutUserDone (Result Http.Error String)
+    | OnLocationChange (Location)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -72,6 +101,11 @@ update msg model =
                         ( { model | user = Nothing }, Cmd.none )
                 _ ->
                     ( { model | user = Nothing }, Cmd.none )
+        OnLocationChange location ->
+            let
+                newRoute = parseLocation location
+            in
+                ( { model | route = newRoute }, Cmd.none )
 
 -- Commands
 getUser : Cmd Msg
@@ -119,12 +153,35 @@ deleteWithCredentials url decoder =
 
 view : Model -> Html Msg
 view model =
+    let
+        page = case model.user of
+            Just _ ->
+                viewLoggedIn model
+            Nothing ->
+                viewWelcome
+    in
+
     div [ class "container-fluid" ]
         [ nav [ class "navbar navbar-dark bg-dark" ]
               [ homeLinkButton
               , loginButton model
               ]
+        , page
         ]
+
+viewWelcome : Html Msg
+viewWelcome =
+    div [ class "container" ]
+        [ div [ class "jumbotron" ]
+              [ p [ class "display-4" ] [ text "Welcome" ]
+              , p [] [ text "This is the MedLog demo application." ]
+              , p [] [ text "Please sign in with your google account to proceed" ]
+              ]
+        ]
+
+viewLoggedIn : Model -> Html Msg
+viewLoggedIn model =
+    text "You are logged in!"
 
 homeLinkButton : Html Msg
 homeLinkButton =
@@ -144,7 +201,7 @@ loginButton model =
 
 main : Program Never Model Msg
 main =
-    Html.program
+    Navigation.program OnLocationChange
         { init = init
         , view = view
         , update = update
