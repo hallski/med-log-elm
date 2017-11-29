@@ -92,17 +92,22 @@ type Msg
     | Logout
     | LogoutUserDone (Result Http.Error String)
     | OnLocationChange (Location)
-    | NewEntryHoursOfSleepChange (String)
-    | NewEntryRestingPulseChange (String)
-    | NewEntryTagChange (String)
     | NewEntrySave
     | NewEntryTimestamp (Time.Time)
     | NewEntrySaveDone (Result Http.Error String)
     | NewEntryCancel
+    | NewEntryFormChange (NewEntryFormMsg)
+
+type NewEntryFormMsg
+    = NewEntryHoursOfSleepChange (String)
+    | NewEntryRestingPulseChange (String)
+    | NewEntryTagChange (String)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NewEntryFormChange formMsg ->
+            ( { model | newEntry = updateNewEntry formMsg model.newEntry }, Cmd.none)
         NewEntries (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
         NewEntries (Err error) ->
@@ -147,24 +152,6 @@ update msg model =
                 ( { model | route = newRoute }, fetchCommand )
         OnNewEntry ->
             ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, getTimestamp )
-        NewEntryHoursOfSleepChange value ->
-            let
-                oldEntry = model.newEntry
-                newEntry = { oldEntry | hoursOfSleep = parseFloat value }
-            in
-                ( { model | newEntry = newEntry }, Cmd.none )
-        NewEntryRestingPulseChange value ->
-            let
-                oldEntry = model.newEntry
-                newEntry = { oldEntry | restingPulse = parseInt value }
-            in
-                ( { model | newEntry = newEntry }, Cmd.none )
-        NewEntryTagChange value ->
-            let
-                oldEntry = model.newEntry
-                newEntry = { oldEntry | tag = value }
-            in
-                ( { model | newEntry = newEntry }, Cmd.none )
         NewEntryTimestamp time ->
             let
                 oldEntry = model.newEntry
@@ -196,6 +183,16 @@ update msg model =
                     ( { model | user = Nothing }, Cmd.none )
         NewEntryCancel ->
             ( { model | route = RootRoute, newEntry = defaultNewEntry }, Cmd.none )
+
+updateNewEntry msg newEntry =
+    case msg of
+        NewEntryHoursOfSleepChange value ->
+            { newEntry | hoursOfSleep = parseFloat value  }
+        NewEntryRestingPulseChange value ->
+            { newEntry | restingPulse = parseInt value }
+        NewEntryTagChange value ->
+            { newEntry | tag = value }
+
 
 parseFloat : String -> Float
 parseFloat = Result.withDefault 0.0 << String.toFloat
@@ -371,12 +368,12 @@ viewNewEntry entry =
         [ div [ class "display-4" ] [ text "Input your Info" ]
             , viewSliderInput
                 "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
-                0 12 0.5 NewEntryHoursOfSleepChange
+                0 12 0.5 (NewEntryFormChange << NewEntryHoursOfSleepChange)
             , viewSliderInput
                 "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
-                40 110 1 NewEntryRestingPulseChange
+                40 110 1 (NewEntryFormChange << NewEntryRestingPulseChange)
             , viewTextInput
-                "Tag" "tag" entry.tag NewEntryTagChange
+                "Tag" "tag" entry.tag (NewEntryFormChange << NewEntryTagChange)
             , span [ class "float-left" ]
                    [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
                        [ text "Cancel" ]
