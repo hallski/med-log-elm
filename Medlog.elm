@@ -89,6 +89,7 @@ type Msg
     = NewEntries (Result Http.Error (List Entry))
     | NewUser (Result Http.Error String)
     | OnNewEntry
+    | OnGoHome
     | Logout
     | LogoutUserDone (Result Http.Error String)
     | OnLocationChange (Location)
@@ -150,6 +151,8 @@ update msg model =
                 fetchCommand = if isLoggedIn model then getEntries else Cmd.none
             in
                 ( { model | route = newRoute }, fetchCommand )
+        OnGoHome ->
+            ( { model | route = RootRoute }, Cmd.none )
         OnNewEntry ->
             ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, Cmd.none )
         NewEntryTimestamp time ->
@@ -348,7 +351,7 @@ viewEntryRow entry =
 
 homeLinkButton : Html Msg
 homeLinkButton =
-    a [ class "navbar-brand", href "/" ] [ text "MedLog" ]
+    a [ class "navbar-brand", onClick OnGoHome ] [ text "MedLog" ]
 
 loginButton : Model -> Html Msg
 loginButton model =
