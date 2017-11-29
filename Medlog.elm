@@ -137,7 +137,7 @@ loginButton model =
             button [ class "btn btn-outline-secondary my-2 my-sm-0" , onClick Logout ]
                    [ text "Logout" ]
         Nothing ->
-            a [ class "btn btn-success my-2 my-sm-0" , onClick Login ]
+            a [ class "btn btn-success my-2 my-sm-0" , href (backendUrl ++ "/login") ]
               [ text "Login" ]
 
 -- Main
