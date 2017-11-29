@@ -151,19 +151,16 @@ update msg model =
             in
                 ( { model | route = newRoute }, fetchCommand )
         OnNewEntry ->
-            ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, getTimestamp )
+            ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, Cmd.none )
         NewEntryTimestamp time ->
             let
                 oldEntry = model.newEntry
                 timestamp = round (Time.inSeconds time)
                 newEntry = { oldEntry | timestamp = timestamp }
             in
-                ( { model | newEntry = newEntry }, Cmd.none )
+                ( { model | newEntry = newEntry }, saveNewEntry newEntry )
         NewEntrySave ->
-            let
-                newEntry = model.newEntry
-            in
-                ( { model | newEntry = defaultNewEntry }, saveNewEntry newEntry)
+            ( model, getTimestamp )
         NewEntrySaveDone (Ok result) ->
             ( { model | route = RootRoute }, getEntries )
         NewEntrySaveDone (Err error) ->
@@ -182,8 +179,9 @@ update msg model =
                 _ ->
                     ( { model | user = Nothing }, Cmd.none )
         NewEntryCancel ->
-            ( { model | route = RootRoute, newEntry = defaultNewEntry }, Cmd.none )
+            ( { model | route = RootRoute }, Cmd.none )
 
+updateNewEntry : NewEntryFormMsg -> NewEntry -> NewEntry
 updateNewEntry msg newEntry =
     case msg of
         NewEntryHoursOfSleepChange value ->
@@ -192,7 +190,6 @@ updateNewEntry msg newEntry =
             { newEntry | restingPulse = parseInt value }
         NewEntryTagChange value ->
             { newEntry | tag = value }
-
 
 parseFloat : String -> Float
 parseFloat = Result.withDefault 0.0 << String.toFloat
