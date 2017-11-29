@@ -42,6 +42,12 @@ init location =
     in
         ( Model Nothing [] currentRoute, getUser )
 
+isLoggedIn : Model -> Bool
+isLoggedIn model =
+    case model.user of
+        Just _ -> True
+        Nothing -> False
+
 
 -- Routing
 
@@ -154,20 +160,18 @@ deleteWithCredentials url decoder =
 view : Model -> Html Msg
 view model =
     let
-        page = case model.user of
-            Just _ ->
-                viewLoggedIn model
-            Nothing ->
-                viewWelcome
+        page = if isLoggedIn model then
+                    viewLoggedIn model
+                else
+                    viewWelcome
     in
-
-    div [ class "container-fluid" ]
-        [ nav [ class "navbar navbar-dark bg-dark" ]
-              [ homeLinkButton
-              , loginButton model
-              ]
-        , page
-        ]
+        div [ class "container-fluid" ]
+            [ nav [ class "navbar navbar-dark bg-dark" ]
+                  [ homeLinkButton
+                  , loginButton model
+                  ]
+            , page
+            ]
 
 viewWelcome : Html Msg
 viewWelcome =
