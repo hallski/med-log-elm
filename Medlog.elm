@@ -108,43 +108,22 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NewEntryFormChange formMsg ->
-            ( { model | newEntry = updateNewEntry formMsg model.newEntry }, Cmd.none)
+            ( { model | newEntry = updateNewEntry formMsg model.newEntry },
+              Cmd.none)
         NewEntries (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
         NewEntries (Err error) ->
-            case error of
-                Http.BadPayload msg _ ->
-                    let
-                        _ = Debug.log "Error: " msg
-                    in
-                        ( { model | user = Nothing }, Cmd.none )
-                _ ->
-                    ( { model | user = Nothing }, Cmd.none )
-
+            ( handleHttpError error model, Cmd.none )
         NewUser (Ok username) ->
             ( { model | user = Just username }, getEntries )
         NewUser (Err error) ->
-            case error of
-                Http.BadPayload msg _ ->
-                    let
-                        _ = Debug.log "Error: " msg
-                    in
-                        ( { model | user = Nothing }, Cmd.none )
-                _ ->
-                    ( { model | user = Nothing }, Cmd.none )
+            ( handleHttpError error model, Cmd.none )
         Logout ->
             ( { model | user = Nothing }, logoutUser )
         LogoutUserDone (Ok username) ->
             ( { model | user = Just username }, Cmd.none )
         LogoutUserDone (Err error) ->
-            case error of
-                Http.BadPayload msg _ ->
-                    let
-                        _ = Debug.log "Error: " msg
-                    in
-                        ( { model | user = Nothing }, Cmd.none )
-                _ ->
-                    ( { model | user = Nothing }, Cmd.none )
+            ( handleHttpError error model, Cmd.none)
         OnLocationChange location ->
             let
                 newRoute = parseLocation location
@@ -167,20 +146,7 @@ update msg model =
         NewEntrySaveDone (Ok result) ->
             ( { model | route = RootRoute }, getEntries )
         NewEntrySaveDone (Err error) ->
-            case error of
-                Http.BadStatus msg ->
-                    let
-                        _ = Debug.log "Error: " msg
-                    in
-                        ( { model | user = Nothing }, Cmd.none )
-
-                Http.BadPayload msg _ ->
-                    let
-                        _ = Debug.log "Error: " msg
-                    in
-                        ( { model | user = Nothing }, Cmd.none )
-                _ ->
-                    ( { model | user = Nothing }, Cmd.none )
+            ( handleHttpError error model, Cmd.none )
         NewEntryCancel ->
             ( { model | route = RootRoute }, Cmd.none )
 
@@ -193,6 +159,23 @@ updateNewEntry msg newEntry =
             { newEntry | restingPulse = parseInt value }
         NewEntryTagChange value ->
             { newEntry | tag = value }
+
+handleHttpError : Http.Error -> Model -> Model
+handleHttpError error model =
+    case error of
+        Http.BadStatus msg ->
+            let
+                _ = Debug.log "Error: " msg
+            in
+                { model | user = Nothing }
+
+        Http.BadPayload msg _ ->
+            let
+                _ = Debug.log "Error: " msg
+            in
+                { model | user = Nothing }
+        _ ->
+            { model | user = Nothing }
 
 parseFloat : String -> Float
 parseFloat = Result.withDefault 0.0 << String.toFloat
@@ -238,6 +221,8 @@ saveNewEntry entry =
             |> postWithCredentials (backendUrl ++ "/entries") body
             |> Http.send NewEntrySaveDone
 
+
+-- Decoders
 userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
@@ -359,7 +344,8 @@ loginButton model =
         button [ class "btn btn-outline-secondary my-2 my-sm-0" , onClick Logout ]
                [ text "Logout" ]
     else
-        a [ class "btn btn-success my-2 my-sm-0" , href (backendUrl ++ "/login") ]
+        a [ class "btn btn-success my-2 my-sm-0"
+          , href (backendUrl ++ "/login") ]
           [ text "Login" ]
 
 viewNewEntry : NewEntry -> Html Msg
