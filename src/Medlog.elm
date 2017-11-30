@@ -21,7 +21,6 @@ type Route
     = RootRoute
     | AddEntryRoute
     | NewEntryRoute
-    | NotFoundRoute
 
 type alias Model =
     { user : Maybe String
@@ -422,6 +421,7 @@ viewPageSelector e =
         g = List.map (viewPageLink e.pageNo) r
     in
         ul [ class "nav pagination" ] g
+
 
 -- Main
 
