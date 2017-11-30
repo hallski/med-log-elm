@@ -34,3 +34,11 @@ postWithCredentials url body decoder =
         , timeout = Nothing
         , withCredentials = True
         }
+
+urlWithQuery : String -> List (String, String) -> String
+urlWithQuery url params =
+    let
+        enc = Http.encodeUri
+        xform = String.join "&" << List.map (\(k, v) -> (enc k) ++ "=" ++ (enc v))
+    in
+        url ++ "?" ++ xform params

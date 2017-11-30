@@ -27,10 +27,21 @@ type Route
 
 type alias Model =
     { user : Maybe String
-    , entries : List Entry
+    , entries : Entries
     , route : Route
     , newEntry : NewEntry
     }
+
+type alias Entries =
+    { entries: List Entry
+    , pageNo: Int
+    , pageSize: Int
+    , pageCount: Int
+    }
+
+defaultEntries : Entries
+defaultEntries =
+    Entries [] 1 10 0
 
 type alias NewEntry =
     { hoursOfSleep : Float
@@ -55,8 +66,9 @@ init : Location -> ( Model, Cmd Msg )
 init location =
     let
         currentRoute = parseLocation location
+        model = Model Nothing defaultEntries currentRoute defaultNewEntry
     in
-        ( Model Nothing [] currentRoute defaultNewEntry, getUser )
+        ( model, getUser )
 
 isLoggedIn : Model -> Bool
 isLoggedIn model =
@@ -86,18 +98,19 @@ parseLocation location =
 -- Update
 
 type Msg
-    = NewEntries (Result Http.Error (List Entry))
+    = NewEntries (Result Http.Error Entries)
     | NewUser (Result Http.Error String)
     | OnNewEntry
     | OnGoHome
+    | OnSetPage Int
     | Logout
     | LogoutUserDone (Result Http.Error String)
-    | OnLocationChange (Location)
+    | OnLocationChange Location
     | NewEntrySave
-    | NewEntryTimestamp (Time.Time)
+    | NewEntryTimestamp Time.Time
     | NewEntrySaveDone (Result Http.Error String)
     | NewEntryCancel
-    | NewEntryFormChange (NewEntryFormMsg)
+    | NewEntryFormChange NewEntryFormMsg
 
 type NewEntryFormMsg
     = NewEntryHoursOfSleepChange (String)
@@ -115,7 +128,7 @@ update msg model =
         NewEntries (Err error) ->
             ( handleHttpError error model, Cmd.none )
         NewUser (Ok username) ->
-            ( { model | user = Just username }, getEntries )
+            ( { model | user = Just username }, getEntries model.entries )
         NewUser (Err error) ->
             ( handleHttpError error model, Cmd.none )
         Logout ->
@@ -127,11 +140,17 @@ update msg model =
         OnLocationChange location ->
             let
                 newRoute = parseLocation location
-                fetchCommand = if isLoggedIn model then getEntries else Cmd.none
+                fetchCommand = if isLoggedIn model then (getEntries model.entries) else Cmd.none
             in
                 ( { model | route = newRoute }, fetchCommand )
         OnGoHome ->
             ( { model | route = RootRoute }, Cmd.none )
+        OnSetPage page ->
+            let
+                oldEntries = model.entries
+                entries = { oldEntries | pageNo = page }
+            in
+                ( { model | entries = entries }, getEntries entries )
         OnNewEntry ->
             ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, Cmd.none )
         NewEntryTimestamp time ->
@@ -144,7 +163,7 @@ update msg model =
         NewEntrySave ->
             ( model, getTimestamp )
         NewEntrySaveDone (Ok result) ->
-            ( { model | route = RootRoute }, getEntries )
+            ( { model | route = RootRoute }, getEntries model.entries )
         NewEntrySaveDone (Err error) ->
             ( handleHttpError error model, Cmd.none )
         NewEntryCancel ->
@@ -200,10 +219,17 @@ logoutUser =
         |> deleteWithCredentials (backendUrl ++ "/user")
         |> Http.send LogoutUserDone
 
-getEntries : Cmd Msg
-getEntries =
+getEntries : Entries -> Cmd Msg
+getEntries entries =
+    let
+        params = [ ("pageSize", toString entries.pageSize)
+                 , ("pageNo", toString entries.pageNo)
+                 ]
+        url = urlWithQuery (backendUrl ++ "/entries") params
+    in
+
     resultsDecoder
-        |> getWithCredentials (backendUrl ++ "/entries")
+        |> getWithCredentials url
         |> Http.send NewEntries
 
 saveNewEntry : NewEntry -> Cmd Msg
@@ -227,9 +253,14 @@ userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
 
-resultsDecoder : Decoder (List Entry)
+
+resultsDecoder : Decoder (Entries)
 resultsDecoder =
-    Decode.field "results" (Decode.list entryDecoder)
+    Decode.map4 Entries
+        (field "results" (Decode.list entryDecoder))
+        (field "pageNo" Decode.int)
+        (field "pageSize" Decode.int)
+        (field "pageCount" Decode.int)
 
 entryDecoder : Decoder Entry
 entryDecoder =
@@ -250,12 +281,12 @@ view : Model -> Html Msg
 view model =
     let
         page = if isLoggedIn model then
-                    if model.route == RootRoute then
-                        viewLoggedIn model
-                    else
-                        viewNewEntry model.newEntry
-          else
-                    viewWelcome
+                   if model.route == RootRoute then
+                       viewLoggedIn model
+                   else
+                       viewNewEntry model.newEntry
+               else
+                   viewWelcome
     in
         viewTemplate model page
 
@@ -281,7 +312,7 @@ viewWelcome =
 
 viewLoggedIn : Model -> Html Msg
 viewLoggedIn model =
-    if List.length model.entries == 0 then
+    if List.length model.entries.entries == 0 then
         viewNoEntries
     else
         viewShowEntries model.entries
@@ -296,19 +327,19 @@ viewNoEntries =
               ]
         ]
 
-viewShowEntries : List Entry -> Html Msg
+viewShowEntries : Entries -> Html Msg
 viewShowEntries entries =
     div []
         [ nav [ class "navbar nav-fill justify-content-between"]
-              [ -- PageSelector
-                ul [ class "nav nav-pills" ]
+              [ viewPageSelector entries
+              , ul [ class "nav nav-pills" ]
                    [ li [ class "nav-item" ]
                         [ button [ type_ "button", class "btn btn-outline-secondary", onClick OnNewEntry ]
                                  [ text "Add New" ]
                         ]
                    ]
               ]
-        , div [] [ viewEntryTable entries ]
+        , div [] [ viewEntryTable entries.entries ]
         ]
 
 viewEntryTable : List Entry -> Html Msg
@@ -341,7 +372,8 @@ homeLinkButton =
 loginButton : Model -> Html Msg
 loginButton model =
     if isLoggedIn model then
-        button [ class "btn btn-outline-secondary my-2 my-sm-0" , onClick Logout ]
+        button [ class "btn btn-outline-secondary my-2 my-sm-0"
+               , onClick Logout ]
                [ text "Logout" ]
     else
         a [ class "btn btn-success my-2 my-sm-0"
@@ -350,25 +382,30 @@ loginButton model =
 
 viewNewEntry : NewEntry -> Html Msg
 viewNewEntry entry =
-    div [ class "container" ]
-        [ div [ class "display-4" ] [ text "Input your Info" ]
-            , viewSliderInput
-                "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
-                0 12 0.5 (NewEntryFormChange << NewEntryHoursOfSleepChange)
-            , viewSliderInput
-                "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
-                40 110 1 (NewEntryFormChange << NewEntryRestingPulseChange)
-            , viewTextInput
-                "Tag" "tag" entry.tag (NewEntryFormChange << NewEntryTagChange)
-            , span [ class "float-left" ]
-                   [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
-                       [ text "Cancel" ]
-                   ]
-            , span [ class "float-right" ]
-                   [ button [ class "btn btn-primary", onClick NewEntrySave ]
-                            [ text "Save" ]
-                   ]
-            ]
+    let
+        hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
+        restingPulseChangeMsg = NewEntryFormChange << NewEntryRestingPulseChange
+        tagChangeMsg = NewEntryFormChange << NewEntryTagChange
+    in
+        div [ class "container" ]
+            [ div [ class "display-4" ] [ text "Input your Info" ]
+                , viewSliderInput
+                    "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
+                    0 12 0.5 hoursOfSleepChangeMsg
+                , viewSliderInput
+                    "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
+                    40 110 1 restingPulseChangeMsg
+                , viewTextInput
+                    "Tag" "tag" entry.tag tagChangeMsg
+                , span [ class "float-left" ]
+                    [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
+                        [ text "Cancel" ]
+                    ]
+                , span [ class "float-right" ]
+                    [ button [ class "btn btn-primary", onClick NewEntrySave ]
+                                [ text "Save" ]
+                    ]
+                ]
 
 
 viewTextInput : String -> String -> String -> (String -> msg) -> Html msg
@@ -404,6 +441,25 @@ viewSliderInput label n v minValue maxValue stepValue onInputMsg =
                 []
               ]
         ]
+
+viewPageLink : Int -> Int -> Html Msg
+viewPageLink index pageNo =
+    let
+        class_ = "page-item" ++ if index == pageNo then " active" else ""
+    in
+        li [ class class_ ]
+           [ a [ class "page-link", onClick (OnSetPage pageNo) ]
+               [ text (toString pageNo) ]
+           ]
+
+viewPageSelector : Entries -> Html Msg
+viewPageSelector e =
+    let
+        r = List.range 1 e.pageCount
+        g = List.map (viewPageLink e.pageNo) r
+    in
+        ul [ class "nav pagination" ] g
+
 -- Main
 
 main : Program Never Model Msg
