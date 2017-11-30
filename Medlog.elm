@@ -7,8 +7,6 @@ import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Json.Encode as Encode
 import Http
-import Navigation exposing (Location)
-import UrlParser as UP
 import Time
 import HttpHelpers exposing (..)
 import Task
@@ -62,11 +60,10 @@ type alias Entry =
     , timeStamp : Int
     }
 
-init : Location -> ( Model, Cmd Msg )
-init location =
+init : ( Model, Cmd Msg )
+init =
     let
-        currentRoute = parseLocation location
-        model = Model Nothing defaultEntries currentRoute defaultNewEntry
+        model = Model Nothing defaultEntries RootRoute defaultNewEntry
     in
         ( model, getUser )
 
@@ -75,24 +72,6 @@ isLoggedIn model =
     case model.user of
         Just _ -> True
         Nothing -> False
-
-
--- Routing
-
-matchers : UP.Parser (Route -> a) a
-matchers =
-    UP.oneOf
-        [ UP.map RootRoute UP.top
-        , UP.map AddEntryRoute (UP.s "addEntry")
-        ]
-
-parseLocation : Location -> Route
-parseLocation location =
-    case (UP.parseHash matchers location) of
-        Just route ->
-            route
-        Nothing ->
-            NotFoundRoute
 
 
 -- Update
@@ -105,7 +84,6 @@ type Msg
     | OnSetPage Int
     | Logout
     | LogoutUserDone (Result Http.Error String)
-    | OnLocationChange Location
     | NewEntrySave
     | NewEntryTimestamp Time.Time
     | NewEntrySaveDone (Result Http.Error String)
@@ -137,12 +115,6 @@ update msg model =
             ( { model | user = Just username }, Cmd.none )
         LogoutUserDone (Err error) ->
             ( handleHttpError error model, Cmd.none)
-        OnLocationChange location ->
-            let
-                newRoute = parseLocation location
-                fetchCommand = if isLoggedIn model then (getEntries model.entries) else Cmd.none
-            in
-                ( { model | route = newRoute }, fetchCommand )
         OnGoHome ->
             ( { model | route = RootRoute }, Cmd.none )
         OnSetPage page ->
@@ -252,7 +224,6 @@ saveNewEntry entry =
 userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
-
 
 resultsDecoder : Decoder (Entries)
 resultsDecoder =
@@ -464,7 +435,7 @@ viewPageSelector e =
 
 main : Program Never Model Msg
 main =
-    Navigation.program OnLocationChange
+    Html.program
         { init = init
         , view = view
         , update = update
