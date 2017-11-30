@@ -27,7 +27,7 @@ type alias Model =
     { user : Maybe String
     , entries : Entries
     , route : Route
-    , newEntry : NewEntry
+    , newEntry : Entry
     }
 
 type alias Entries =
@@ -41,17 +41,6 @@ defaultEntries : Entries
 defaultEntries =
     Entries [] 1 10 0
 
-type alias NewEntry =
-    { hoursOfSleep : Float
-    , tag : String
-    , restingPulse : Int
-    , timestamp: Int
-    }
-
-defaultNewEntry : NewEntry
-defaultNewEntry =
-    NewEntry 8 "" 80 0
-
 type alias Entry =
     { id: String
     , hoursOfSleep : Float
@@ -60,10 +49,13 @@ type alias Entry =
     , timeStamp : Int
     }
 
+defaultEntry =
+    Entry "0" 8 "" 80 0
+
 init : ( Model, Cmd Msg )
 init =
     let
-        model = Model Nothing defaultEntries RootRoute defaultNewEntry
+        model = Model Nothing defaultEntries RootRoute defaultEntry
     in
         ( model, getUser )
 
@@ -124,12 +116,12 @@ update msg model =
             in
                 ( { model | entries = entries }, getEntries entries )
         OnNewEntry ->
-            ( { model | route = NewEntryRoute, newEntry = defaultNewEntry }, Cmd.none )
+            ( { model | route = NewEntryRoute, newEntry = defaultEntry }, Cmd.none )
         NewEntryTimestamp time ->
             let
                 oldEntry = model.newEntry
-                timestamp = round (Time.inSeconds time)
-                newEntry = { oldEntry | timestamp = timestamp }
+                timeStamp = round (Time.inSeconds time)
+                newEntry = { oldEntry | timeStamp = timeStamp }
             in
                 ( { model | newEntry = newEntry }, saveNewEntry newEntry )
         NewEntrySave ->
@@ -141,7 +133,7 @@ update msg model =
         NewEntryCancel ->
             ( { model | route = RootRoute }, Cmd.none )
 
-updateNewEntry : NewEntryFormMsg -> NewEntry -> NewEntry
+updateNewEntry : NewEntryFormMsg -> Entry -> Entry
 updateNewEntry msg newEntry =
     case msg of
         NewEntryHoursOfSleepChange value ->
@@ -204,7 +196,7 @@ getEntries entries =
         |> getWithCredentials url
         |> Http.send NewEntries
 
-saveNewEntry : NewEntry -> Cmd Msg
+saveNewEntry : Entry -> Cmd Msg
 saveNewEntry entry =
     let
         body =
@@ -212,7 +204,7 @@ saveNewEntry entry =
                 [ ("hoursOfSleep", Encode.float entry.hoursOfSleep)
                 , ("restingPulse", Encode.int entry.restingPulse)
                 , ("tag", Encode.string entry.tag)
-                , ("timestamp", Encode.int entry.timestamp)
+                , ("timestamp", Encode.int entry.timeStamp)
                 ]
     in
         saveNewEntryDecoder
@@ -351,7 +343,7 @@ loginButton model =
           , href (backendUrl ++ "/login") ]
           [ text "Login" ]
 
-viewNewEntry : NewEntry -> Html Msg
+viewNewEntry : Entry -> Html Msg
 viewNewEntry entry =
     let
         hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
