@@ -4,6 +4,7 @@ import Http
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Json.Encode as Encode exposing (Value)
 
+
 requestWithCredentials : String -> String -> Decoder a -> Http.Request a
 requestWithCredentials method url decoder =
     Http.request
@@ -15,7 +16,6 @@ requestWithCredentials method url decoder =
     , timeout = Nothing
     , withCredentials = True
     }
-
 
 getWithCredentials : String -> Decoder a -> Http.Request a
 getWithCredentials = requestWithCredentials "GET"
