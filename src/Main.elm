@@ -50,26 +50,35 @@ update msg model =
 
         GetEntriesResult (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
+
         GetEntriesResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
+
         GetUserResult (Ok username) ->
             ( { model | user = Just username }, getEntries model.entries )
+
         GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
+
         LogoutResult (Ok username) ->
             ( { model | user = Just username }, Cmd.none )
+
         LogoutResult (Err error) ->
             ( handleHttpError error model, Cmd.none)
+
         NavigateHome ->
             ( { model | route = RootRoute }, Cmd.none )
+
         OnSetPage page ->
             let
                 oldEntries = model.entries
                 entries = { oldEntries | pageNo = page }
             in
                 ( { model | entries = entries }, getEntries entries )
+
         OnNewEntry ->
             ( { model | route = NewEntryRoute, newEntry = defaultEntry }, Cmd.none )
+
         NewEntryDone entryAdded ->
             let
                 cmd = if entryAdded then getEntries model.entries else Cmd.none
