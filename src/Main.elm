@@ -10,7 +10,7 @@ import Http
 import HttpHelpers exposing (..)
 import Model exposing (..)
 import Msg exposing (..)
-import AddNewEntry exposing (..)
+import AddNewEntryPage exposing (..)
 import Time
 
 
