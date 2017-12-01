@@ -36,12 +36,15 @@ update msg model =
     case msg of
         SubAddEntry formMsg ->
             let
-                (newEntry, result) = updateNewEntry formMsg model.newEntry
+                ( newEntry, result ) =
+                    updateNewEntry formMsg model.newEntry
+
                 newModel = { model | newEntry = newEntry }
             in
                 case result of
                     Message msg ->
                         update msg newModel
+
                     Command cmd ->
                         (newModel, cmd)
 
