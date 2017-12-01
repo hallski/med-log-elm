@@ -1,4 +1,4 @@
-module AddNewEntryPage exposing (updateNewEntry, viewNewEntry)
+module PageAddNewEntry exposing (updateNewEntry, viewAddNewEntry)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -86,8 +86,8 @@ saveNewEntryDecoder : Decoder String
 saveNewEntryDecoder =
     Decode.field "id" Decode.string
 
--- Views
 
+-- Views
 viewTextInput : String -> String -> String -> (String -> msg) -> Html msg
 viewTextInput label n v onInputMsg =
     div [ class "input-group" ]
@@ -122,8 +122,8 @@ viewSliderInput label n v minValue maxValue stepValue onInputMsg =
               ]
         ]
 
-viewNewEntry : Entry -> Html Msg
-viewNewEntry entry =
+viewAddNewEntry : Entry -> Html Msg
+viewAddNewEntry entry =
     let
         hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
         restingPulseChangeMsg = NewEntryFormChange << NewEntryRestingPulseChange

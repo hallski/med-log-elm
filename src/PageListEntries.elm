@@ -1,4 +1,4 @@
-module ListEntriesPage exposing (viewListEntries)
+module PageListEntries exposing (viewListEntries)
 
 import Model exposing (Entry, Entries)
 import Msg exposing (..)

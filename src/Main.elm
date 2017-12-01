@@ -9,8 +9,8 @@ import Http
 import HttpHelpers exposing (..)
 import Model exposing (..)
 import Msg exposing (..)
-import AddNewEntryPage exposing (..)
-import ListEntriesPage exposing (..)
+import PageAddNewEntry exposing (..)
+import PageListEntries exposing (..)
 
 
 init : ( Model, Cmd Msg )
@@ -149,14 +149,10 @@ view model =
                    if model.route == RootRoute then
                        viewListEntries model.entries
                    else
-                       viewNewEntry model.newEntry
+                       viewAddNewEntry model.newEntry
                else
                    viewWelcome
     in
-        viewTemplate model page
-
-viewTemplate : Model -> Html Msg -> Html Msg
-viewTemplate model page =
        div [ class "container-fluid" ]
            [ nav [ class "navbar navbar-dark bg-dark" ]
                  [ homeLinkButton
