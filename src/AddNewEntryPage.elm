@@ -1,4 +1,4 @@
-module AddNewEntryPage exposing (..)
+module AddNewEntryPage exposing (updateNewEntry, viewNewEntry)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)

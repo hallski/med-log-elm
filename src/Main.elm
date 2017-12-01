@@ -2,7 +2,7 @@ module MedLog exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onClick)
 
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Http
@@ -10,7 +10,7 @@ import HttpHelpers exposing (..)
 import Model exposing (..)
 import Msg exposing (..)
 import AddNewEntryPage exposing (..)
-import Time
+import ListEntriesPage exposing (..)
 
 
 init : ( Model, Cmd Msg )
@@ -147,7 +147,7 @@ view model =
     let
         page = if isLoggedIn model then
                    if model.route == RootRoute then
-                       viewLoggedIn model
+                       viewListEntries model.entries
                    else
                        viewNewEntry model.newEntry
                else
@@ -175,60 +175,6 @@ viewWelcome =
               ]
         ]
 
-viewLoggedIn : Model -> Html Msg
-viewLoggedIn model =
-    if List.length model.entries.entries == 0 then
-        viewNoEntries
-    else
-        viewShowEntries model.entries
-
-viewNoEntries : Html Msg
-viewNoEntries =
-    div [ class "jumbotron" ]
-        [ div [ class "display-5 text-center" ] [ text "You have not made any log entries yet!" ]
-        , div [ class "text-center" ]
-              [ button [ type_ "button", class "btn btn-primary", onClick OnNewEntry ]
-                       [ text "Add your first log-entry!" ]
-              ]
-        ]
-
-viewShowEntries : Entries -> Html Msg
-viewShowEntries entries =
-    div []
-        [ nav [ class "navbar nav-fill justify-content-between"]
-              [ viewPageSelector entries
-              , ul [ class "nav nav-pills" ]
-                   [ li [ class "nav-item" ]
-                        [ button [ type_ "button", class "btn btn-outline-secondary", onClick OnNewEntry ]
-                                 [ text "Add New" ]
-                        ]
-                   ]
-              ]
-        , div [] [ viewEntryTable entries.entries ]
-        ]
-
-viewEntryTable : List Entry -> Html Msg
-viewEntryTable entries =
-    let
-        headers = [ "Hours of sleep"
-                  , "Resting pulse"
-                  , "Tag"
-                  , "Timestamp"
-                  ]
-        tableHeader = \str -> th [] [ text str ]
-        h = thead [] [ tr [] (List.map tableHeader headers) ]
-        rows = h :: List.map viewEntryRow entries
-    in
-        table [ class "table" ] rows
-
-viewEntryRow : Entry -> Html Msg
-viewEntryRow entry =
-    tr []
-       [ td [] [ text (toString entry.hoursOfSleep) ]
-       , td [] [ text (toString entry.restingPulse) ]
-       , td [] [ text entry.tag ]
-       , td [] [ text (toString entry.timeStamp) ]
-       ]
 
 homeLinkButton : Html Msg
 homeLinkButton =
@@ -244,26 +190,6 @@ loginButton model =
         a [ class "btn btn-success my-2 my-sm-0"
           , href (backendUrl ++ "/login") ]
           [ text "Login" ]
-
-
-
-viewPageLink : Int -> Int -> Html Msg
-viewPageLink index pageNo =
-    let
-        class_ = "page-item" ++ if index == pageNo then " active" else ""
-    in
-        li [ class class_ ]
-           [ a [ class "page-link", onClick (OnSetPage pageNo) ]
-               [ text (toString pageNo) ]
-           ]
-
-viewPageSelector : Entries -> Html Msg
-viewPageSelector e =
-    let
-        r = List.range 1 e.pageCount
-        g = List.map (viewPageLink e.pageNo) r
-    in
-        ul [ class "nav pagination" ] g
 
 
 -- Main
