@@ -28,14 +28,20 @@ isLoggedIn model =
 
 
 -- Update
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NewEntryFormChange formMsg ->
-            ( { model | newEntry = updateNewEntry formMsg model.newEntry },
-              Cmd.none)
+            let
+                (newEntry, result) = updateNewEntry formMsg model.newEntry
+                newModel = { model | newEntry = newEntry }
+            in
+                case result of
+                    Message msg ->
+                        update msg newModel
+                    Command cmd ->
+                        (newModel, cmd)
+
         NewEntries (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
         NewEntries (Err error) ->
@@ -60,21 +66,11 @@ update msg model =
                 ( { model | entries = entries }, getEntries entries )
         OnNewEntry ->
             ( { model | route = NewEntryRoute, newEntry = defaultEntry }, Cmd.none )
-        NewEntryTimestamp time ->
+        NewEntryDone entryAdded ->
             let
-                oldEntry = model.newEntry
-                timeStamp = round (Time.inSeconds time)
-                newEntry = { oldEntry | timeStamp = timeStamp }
+                cmd = if entryAdded then getEntries model.entries else Cmd.none
             in
-                ( { model | newEntry = newEntry }, saveNewEntry newEntry )
-        NewEntrySave ->
-            ( model, getTimestamp )
-        NewEntrySaveDone (Ok result) ->
-            ( { model | route = RootRoute }, getEntries model.entries )
-        NewEntrySaveDone (Err error) ->
-            ( handleHttpError error model, Cmd.none )
-        NewEntryDone ->
-            ( { model | route = RootRoute }, Cmd.none )
+                ( { model | route = RootRoute }, cmd )
 
 
 handleHttpError : Http.Error -> Model -> Model

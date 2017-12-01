@@ -16,15 +16,28 @@ import HttpHelpers exposing (postWithCredentials)
 import Http
 
 -- Update
-updateNewEntry : NewEntryFormMsg -> Entry -> Entry
+updateNewEntry : NewEntryFormMsg -> Entry -> ( Entry, SubUpdateResult )
 updateNewEntry msg newEntry =
     case msg of
         NewEntryHoursOfSleepChange value ->
-            { newEntry | hoursOfSleep = parseFloat value  }
+            ( { newEntry | hoursOfSleep = parseFloat value  }, Command Cmd.none )
         NewEntryRestingPulseChange value ->
-            { newEntry | restingPulse = parseInt value }
+            ( { newEntry | restingPulse = parseInt value }, Command Cmd.none )
         NewEntryTagChange value ->
-            { newEntry | tag = value }
+            ( { newEntry | tag = value }, Command Cmd.none )
+        NewEntryTimestamp time ->
+            let
+                timeStamp = round (Time.inSeconds time)
+                entry = { newEntry | timeStamp = timeStamp }
+            in
+                ( entry, Command (saveNewEntry entry) )
+        NewEntrySave ->
+            ( newEntry, Command getTimestamp )
+        NewEntrySaveDone (Ok result) ->
+            ( newEntry, Message (NewEntryDone True) )
+        NewEntrySaveDone (Err error) ->
+            printHttpError error newEntry
+
 
 parseFloat : String -> Float
 parseFloat = Result.withDefault 0.0 << String.toFloat
@@ -32,10 +45,27 @@ parseFloat = Result.withDefault 0.0 << String.toFloat
 parseInt : String -> Int
 parseInt = Result.withDefault 0 << String.toInt
 
+printHttpError : Http.Error -> Entry -> (Entry, SubUpdateResult)
+printHttpError error entry =
+    case error of
+        Http.BadStatus msg ->
+            let
+                _ = Debug.log "Error: " msg
+            in
+                (entry, Command Cmd.none)
+
+        Http.BadPayload msg _ ->
+            let
+                _ = Debug.log "Error: " msg
+            in
+                (entry, Command Cmd.none)
+        _ ->
+            (entry, Command Cmd.none)
+
 -- Commands
 getTimestamp : Cmd Msg
 getTimestamp =
-    Task.perform NewEntryTimestamp Time.now
+    Task.perform (NewEntryFormChange << NewEntryTimestamp) Time.now
 
 saveNewEntry : Entry -> Cmd Msg
 saveNewEntry entry =
@@ -50,7 +80,7 @@ saveNewEntry entry =
     in
         saveNewEntryDecoder
             |> postWithCredentials (backendUrl ++ "/entries") body
-            |> Http.send NewEntrySaveDone
+            |> Http.send (NewEntryFormChange << NewEntrySaveDone)
 
 saveNewEntryDecoder : Decoder String
 saveNewEntryDecoder =
@@ -98,6 +128,8 @@ viewNewEntry entry =
         hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
         restingPulseChangeMsg = NewEntryFormChange << NewEntryRestingPulseChange
         tagChangeMsg = NewEntryFormChange << NewEntryTagChange
+        saveMsg = NewEntryFormChange NewEntrySave
+        cancelMsg = NewEntryDone False
     in
         div [ class "container" ]
             [ div [ class "display-4" ] [ text "Input your Info" ]
@@ -110,11 +142,11 @@ viewNewEntry entry =
                 , viewTextInput
                     "Tag" "tag" entry.tag tagChangeMsg
                 , span [ class "float-left" ]
-                    [ a [ class "btn btn-secondary", onClick NewEntryDone ]
+                    [ a [ class "btn btn-secondary", onClick cancelMsg ]
                         [ text "Cancel" ]
                     ]
                 , span [ class "float-right" ]
-                    [ button [ class "btn btn-primary", onClick NewEntrySave ]
+                    [ button [ class "btn btn-primary", onClick saveMsg ]
                                 [ text "Save" ]
                     ]
                 ]
