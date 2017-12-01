@@ -4,6 +4,7 @@ import Model exposing (Entries)
 import Http exposing (Error)
 import Time
 
+
 type Msg
     = GetEntriesResult (Result Http.Error Entries)
     | GetUserResult (Result Http.Error String)
@@ -15,6 +16,7 @@ type Msg
     | NewEntryDone Bool -- Whether a new entry was added or not
     | SubAddEntry AddNewEntryMsg
 
+
 type AddNewEntryMsg
     = AddNewEntryHoursOfSleepChange (String)
     | AddNewEntryRestingPulseChange (String)
@@ -22,6 +24,7 @@ type AddNewEntryMsg
     | AddNewEntrySave
     | AddNewEntryTimestamp Time.Time
     | AddNewEntrySaveDone (Result Http.Error String)
+
 
 type SubUpdateResult
     = Message Msg

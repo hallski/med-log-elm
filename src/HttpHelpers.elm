@@ -17,11 +17,14 @@ requestWithCredentials method url decoder =
     , withCredentials = True
     }
 
+
 getWithCredentials : String -> Decoder a -> Http.Request a
 getWithCredentials = requestWithCredentials "GET"
 
+
 deleteWithCredentials : String -> Decoder a -> Http.Request a
 deleteWithCredentials = requestWithCredentials "DELETE"
+
 
 postWithCredentials : String -> Encode.Value -> Decoder a -> Http.Request a
 postWithCredentials url body decoder =
@@ -35,10 +38,14 @@ postWithCredentials url body decoder =
         , withCredentials = True
         }
 
+
 urlWithQuery : String -> List (String, String) -> String
 urlWithQuery url params =
     let
         enc = Http.encodeUri
-        xform = String.join "&" << List.map (\(k, v) -> (enc k) ++ "=" ++ (enc v))
+
+        paramString =
+            params
+                |> String.join "&" << List.map (\(k, v) -> (enc k) ++ "=" ++ (enc v))
     in
-        url ++ "?" ++ xform params
+        url ++ "?" ++ paramString

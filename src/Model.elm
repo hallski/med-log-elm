@@ -1,6 +1,7 @@
 module Model exposing (..)
 
 
+-- For now, only use against server running on localhost.
 backendUrl : String
 backendUrl = "http://localhost:9090"
 
