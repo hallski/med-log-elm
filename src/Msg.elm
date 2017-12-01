@@ -5,17 +5,17 @@ import Http exposing (Error)
 import Time
 
 type Msg
-    = NewEntries (Result Http.Error Entries)
-    | NewUser (Result Http.Error String)
+    = GetEntriesResult (Result Http.Error Entries)
+    | GetUserResult (Result Http.Error String)
     | OnNewEntry
     | OnGoHome
     | OnSetPage Int
     | Logout
     | LogoutUserDone (Result Http.Error String)
     | NewEntryDone Bool -- Whether a new entry was added or not
-    | NewEntryFormChange NewEntryFormMsg
+    | SubAddEntry AddNewEntryMsg
 
-type NewEntryFormMsg
+type AddNewEntryMsg
     = NewEntryHoursOfSleepChange (String)
     | NewEntryRestingPulseChange (String)
     | NewEntryTagChange (String)

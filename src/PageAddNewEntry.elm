@@ -16,7 +16,7 @@ import HttpHelpers exposing (postWithCredentials)
 import Http
 
 -- Update
-updateNewEntry : NewEntryFormMsg -> Entry -> ( Entry, SubUpdateResult )
+updateNewEntry : AddNewEntryMsg -> Entry -> ( Entry, SubUpdateResult )
 updateNewEntry msg newEntry =
     case msg of
         NewEntryHoursOfSleepChange value ->
@@ -65,7 +65,7 @@ printHttpError error entry =
 -- Commands
 getTimestamp : Cmd Msg
 getTimestamp =
-    Task.perform (NewEntryFormChange << NewEntryTimestamp) Time.now
+    Task.perform (SubAddEntry << NewEntryTimestamp) Time.now
 
 saveNewEntry : Entry -> Cmd Msg
 saveNewEntry entry =
@@ -80,7 +80,7 @@ saveNewEntry entry =
     in
         saveNewEntryDecoder
             |> postWithCredentials (backendUrl ++ "/entries") body
-            |> Http.send (NewEntryFormChange << NewEntrySaveDone)
+            |> Http.send (SubAddEntry << NewEntrySaveDone)
 
 saveNewEntryDecoder : Decoder String
 saveNewEntryDecoder =
@@ -125,10 +125,10 @@ viewSliderInput label n v minValue maxValue stepValue onInputMsg =
 viewAddNewEntry : Entry -> Html Msg
 viewAddNewEntry entry =
     let
-        hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
-        restingPulseChangeMsg = NewEntryFormChange << NewEntryRestingPulseChange
-        tagChangeMsg = NewEntryFormChange << NewEntryTagChange
-        saveMsg = NewEntryFormChange NewEntrySave
+        hoursOfSleepChangeMsg = SubAddEntry << NewEntryHoursOfSleepChange
+        restingPulseChangeMsg = SubAddEntry << NewEntryRestingPulseChange
+        tagChangeMsg = SubAddEntry << NewEntryTagChange
+        saveMsg = SubAddEntry NewEntrySave
         cancelMsg = NewEntryDone False
     in
         div [ class "container" ]

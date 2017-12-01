@@ -31,7 +31,7 @@ isLoggedIn model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NewEntryFormChange formMsg ->
+        SubAddEntry formMsg ->
             let
                 (newEntry, result) = updateNewEntry formMsg model.newEntry
                 newModel = { model | newEntry = newEntry }
@@ -42,13 +42,13 @@ update msg model =
                     Command cmd ->
                         (newModel, cmd)
 
-        NewEntries (Ok entries) ->
+        GetEntriesResult (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
-        NewEntries (Err error) ->
+        GetEntriesResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
-        NewUser (Ok username) ->
+        GetUserResult (Ok username) ->
             ( { model | user = Just username }, getEntries model.entries )
-        NewUser (Err error) ->
+        GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
         Logout ->
             ( { model | user = Nothing }, logoutUser )
@@ -96,7 +96,7 @@ getUser : Cmd Msg
 getUser =
     userDecoder
         |> getWithCredentials (backendUrl ++ "/user")
-        |> Http.send NewUser
+        |> Http.send GetUserResult
 
 logoutUser : Cmd Msg
 logoutUser =
@@ -115,7 +115,7 @@ getEntries entries =
 
     resultsDecoder
         |> getWithCredentials url
-        |> Http.send NewEntries
+        |> Http.send GetEntriesResult
 
 -- Decoders
 userDecoder : Decoder String
@@ -170,7 +170,6 @@ viewWelcome =
               , p [] [ text "Please sign in with your google account to proceed" ]
               ]
         ]
-
 
 homeLinkButton : Html Msg
 homeLinkButton =
