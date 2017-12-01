@@ -5,7 +5,6 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 
 import Json.Decode as Decode exposing (Decoder, field, succeed)
-import Json.Encode as Encode
 import Http
 import HttpHelpers exposing (..)
 import Model exposing (..)
@@ -74,7 +73,7 @@ update msg model =
             ( { model | route = RootRoute }, getEntries model.entries )
         NewEntrySaveDone (Err error) ->
             ( handleHttpError error model, Cmd.none )
-        NewEntryCancel ->
+        NewEntryDone ->
             ( { model | route = RootRoute }, Cmd.none )
 
 

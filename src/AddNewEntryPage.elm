@@ -110,7 +110,7 @@ viewNewEntry entry =
                 , viewTextInput
                     "Tag" "tag" entry.tag tagChangeMsg
                 , span [ class "float-left" ]
-                    [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
+                    [ a [ class "btn btn-secondary", onClick NewEntryDone ]
                         [ text "Cancel" ]
                     ]
                 , span [ class "float-right" ]

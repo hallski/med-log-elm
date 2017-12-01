@@ -15,10 +15,11 @@ type Msg
     | NewEntrySave
     | NewEntryTimestamp Time.Time
     | NewEntrySaveDone (Result Http.Error String)
-    | NewEntryCancel
+    | NewEntryDone
     | NewEntryFormChange NewEntryFormMsg
 
 type NewEntryFormMsg
     = NewEntryHoursOfSleepChange (String)
     | NewEntryRestingPulseChange (String)
     | NewEntryTagChange (String)
+
