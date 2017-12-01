@@ -16,13 +16,15 @@ viewListEntries entries =
     else
         viewShowEntries entries
 
+
 viewPageSelector : Entries -> Html Msg
-viewPageSelector e =
+viewPageSelector entries =
     let
-        r = List.range 1 e.pageCount
-        g = List.map (viewPageLink e.pageNo) r
+        pageLinks = List.range 1 entries.pageCount
+                        |> List.map (viewPageLink entries.pageNo)
     in
-        ul [ class "nav pagination" ] g
+        ul [ class "nav pagination" ] pageLinks
+
 
 viewPageLink : Int -> Int -> Html Msg
 viewPageLink index pageNo =
@@ -34,6 +36,7 @@ viewPageLink index pageNo =
                [ text (toString pageNo) ]
            ]
 
+
 viewNoEntries : Html Msg
 viewNoEntries =
     div [ class "jumbotron" ]
@@ -44,6 +47,7 @@ viewNoEntries =
               ]
         ]
 
+
 viewShowEntries : Entries -> Html Msg
 viewShowEntries entries =
     div []
@@ -51,13 +55,17 @@ viewShowEntries entries =
               [ viewPageSelector entries
               , ul [ class "nav nav-pills" ]
                    [ li [ class "nav-item" ]
-                        [ button [ type_ "button", class "btn btn-outline-secondary", onClick OnNewEntry ]
+                        [ button [ type_ "button"
+                                 , class "btn btn-outline-secondary"
+                                 , onClick OnNewEntry
+                                 ]
                                  [ text "Add New" ]
                         ]
                    ]
               ]
         , div [] [ viewEntryTable entries.entries ]
         ]
+
 
 viewEntryTable : List Entry -> Html Msg
 viewEntryTable entries =
@@ -68,10 +76,12 @@ viewEntryTable entries =
                   , "Timestamp"
                   ]
         tableHeader = \str -> th [] [ text str ]
-        h = thead [] [ tr [] (List.map tableHeader headers) ]
-        rows = h :: List.map viewEntryRow entries
+
+        rows = thead [] [ tr [] (List.map tableHeader headers) ]
+                   :: (List.map viewEntryRow entries)
     in
         table [ class "table" ] rows
+
 
 viewEntryRow : Entry -> Html Msg
 viewEntryRow entry =

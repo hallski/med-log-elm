@@ -4,10 +4,12 @@ module Model exposing (..)
 backendUrl : String
 backendUrl = "http://localhost:9090"
 
+
 type Route
     = RootRoute
     | AddEntryRoute
     | NewEntryRoute
+
 
 type alias Model =
     { user : Maybe String
@@ -16,6 +18,7 @@ type alias Model =
     , newEntry : Entry
     }
 
+
 type alias Entries =
     { entries: List Entry
     , pageNo: Int
@@ -23,9 +26,11 @@ type alias Entries =
     , pageCount: Int
     }
 
+
 defaultEntries : Entries
 defaultEntries =
     Entries [] 1 10 0
+
 
 type alias Entry =
     { id: String
@@ -34,6 +39,7 @@ type alias Entry =
     , restingPulse : Int
     , timeStamp : Int
     }
+
 
 defaultEntry : Entry
 defaultEntry =

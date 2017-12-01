@@ -8,20 +8,20 @@ type Msg
     = GetEntriesResult (Result Http.Error Entries)
     | GetUserResult (Result Http.Error String)
     | OnNewEntry
-    | OnGoHome
+    | NavigateHome
     | OnSetPage Int
     | Logout
-    | LogoutUserDone (Result Http.Error String)
+    | LogoutResult (Result Http.Error String)
     | NewEntryDone Bool -- Whether a new entry was added or not
     | SubAddEntry AddNewEntryMsg
 
 type AddNewEntryMsg
-    = NewEntryHoursOfSleepChange (String)
-    | NewEntryRestingPulseChange (String)
-    | NewEntryTagChange (String)
-    | NewEntrySave
-    | NewEntryTimestamp Time.Time
-    | NewEntrySaveDone (Result Http.Error String)
+    = AddNewEntryHoursOfSleepChange (String)
+    | AddNewEntryRestingPulseChange (String)
+    | AddNewEntryTagChange (String)
+    | AddNewEntrySave
+    | AddNewEntryTimestamp Time.Time
+    | AddNewEntrySaveDone (Result Http.Error String)
 
 type SubUpdateResult
     = Message Msg

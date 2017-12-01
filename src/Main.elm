@@ -1,17 +1,16 @@
 module MedLog exposing (..)
 
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
-
-import Json.Decode as Decode exposing (Decoder, field, succeed)
-import Http
 import HttpHelpers exposing (..)
 import Model exposing (..)
 import Msg exposing (..)
 import PageAddNewEntry exposing (..)
 import PageListEntries exposing (..)
 
+import Json.Decode as Decode exposing (Decoder, field, succeed)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
+import Http
 
 init : ( Model, Cmd Msg )
 init =
@@ -20,14 +19,18 @@ init =
     in
         ( model, getUser )
 
+
 isLoggedIn : Model -> Bool
 isLoggedIn model =
     case model.user of
-        Just _ -> True
-        Nothing -> False
+        Just _ ->
+            True
+        Nothing ->
+            False
 
 
 -- Update
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -42,6 +45,9 @@ update msg model =
                     Command cmd ->
                         (newModel, cmd)
 
+        Logout ->
+            ( { model | user = Nothing }, logoutUser )
+
         GetEntriesResult (Ok entries) ->
             ( { model | entries = entries }, Cmd.none )
         GetEntriesResult (Err error) ->
@@ -50,13 +56,11 @@ update msg model =
             ( { model | user = Just username }, getEntries model.entries )
         GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
-        Logout ->
-            ( { model | user = Nothing }, logoutUser )
-        LogoutUserDone (Ok username) ->
+        LogoutResult (Ok username) ->
             ( { model | user = Just username }, Cmd.none )
-        LogoutUserDone (Err error) ->
+        LogoutResult (Err error) ->
             ( handleHttpError error model, Cmd.none)
-        OnGoHome ->
+        NavigateHome ->
             ( { model | route = RootRoute }, Cmd.none )
         OnSetPage page ->
             let
@@ -92,17 +96,20 @@ handleHttpError error model =
 
 
 -- Commands
+
 getUser : Cmd Msg
 getUser =
     userDecoder
         |> getWithCredentials (backendUrl ++ "/user")
         |> Http.send GetUserResult
 
+
 logoutUser : Cmd Msg
 logoutUser =
     userDecoder
         |> deleteWithCredentials (backendUrl ++ "/user")
-        |> Http.send LogoutUserDone
+        |> Http.send LogoutResult
+
 
 getEntries : Entries -> Cmd Msg
 getEntries entries =
@@ -117,10 +124,13 @@ getEntries entries =
         |> getWithCredentials url
         |> Http.send GetEntriesResult
 
+
 -- Decoders
+
 userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
+
 
 resultsDecoder : Decoder (Entries)
 resultsDecoder =
@@ -129,6 +139,7 @@ resultsDecoder =
         (field "pageNo" Decode.int)
         (field "pageSize" Decode.int)
         (field "pageCount" Decode.int)
+
 
 entryDecoder : Decoder Entry
 entryDecoder =
@@ -161,19 +172,26 @@ view model =
            , page
            ]
 
+
 viewWelcome : Html Msg
 viewWelcome =
     div [ class "container" ]
         [ div [ class "jumbotron" ]
-              [ p [ class "display-4" ] [ text "Welcome" ]
-              , p [] [ text "This is the MedLog demo application." ]
-              , p [] [ text "Please sign in with your google account to proceed" ]
+              [ p [ class "display-4" ]
+                  [ text "Welcome" ]
+              , p []
+                  [ text "This is the MedLog demo application." ]
+              , p []
+                  [ text "Please sign in with your google account to proceed" ]
               ]
         ]
 
+
 homeLinkButton : Html Msg
 homeLinkButton =
-    a [ class "navbar-brand", onClick OnGoHome, href "" ] [ text "MedLog" ]
+    a [ class "navbar-brand", onClick NavigateHome, href "" ]
+      [ text "MedLog" ]
+
 
 loginButton : Model -> Html Msg
 loginButton model =
