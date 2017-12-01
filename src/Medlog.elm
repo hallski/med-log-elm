@@ -10,46 +10,11 @@ import Http
 import Time
 import HttpHelpers exposing (..)
 import Task
+import Model exposing (..)
+import Msg exposing (..)
 
 backendUrl : String
 backendUrl = "http://localhost:9090"
-
-
--- Model
-
-type Route
-    = RootRoute
-    | AddEntryRoute
-    | NewEntryRoute
-
-type alias Model =
-    { user : Maybe String
-    , entries : Entries
-    , route : Route
-    , newEntry : Entry
-    }
-
-type alias Entries =
-    { entries: List Entry
-    , pageNo: Int
-    , pageSize: Int
-    , pageCount: Int
-    }
-
-defaultEntries : Entries
-defaultEntries =
-    Entries [] 1 10 0
-
-type alias Entry =
-    { id: String
-    , hoursOfSleep : Float
-    , tag : String
-    , restingPulse : Int
-    , timeStamp : Int
-    }
-
-defaultEntry =
-    Entry "0" 8 "" 80 0
 
 init : ( Model, Cmd Msg )
 init =
@@ -67,24 +32,6 @@ isLoggedIn model =
 
 -- Update
 
-type Msg
-    = NewEntries (Result Http.Error Entries)
-    | NewUser (Result Http.Error String)
-    | OnNewEntry
-    | OnGoHome
-    | OnSetPage Int
-    | Logout
-    | LogoutUserDone (Result Http.Error String)
-    | NewEntrySave
-    | NewEntryTimestamp Time.Time
-    | NewEntrySaveDone (Result Http.Error String)
-    | NewEntryCancel
-    | NewEntryFormChange NewEntryFormMsg
-
-type NewEntryFormMsg
-    = NewEntryHoursOfSleepChange (String)
-    | NewEntryRestingPulseChange (String)
-    | NewEntryTagChange (String)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
