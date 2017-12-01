@@ -8,7 +8,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 
 
--- Public
+-- Views
 viewListEntries : Entries -> Html Msg
 viewListEntries entries =
     if List.length entries.entries == 0 then
@@ -16,7 +16,6 @@ viewListEntries entries =
     else
         viewShowEntries entries
 
--- Internal
 viewPageSelector : Entries -> Html Msg
 viewPageSelector e =
     let
@@ -34,7 +33,6 @@ viewPageLink index pageNo =
            [ a [ class "page-link", onClick (OnSetPage pageNo) ]
                [ text (toString pageNo) ]
            ]
-
 
 viewNoEntries : Html Msg
 viewNoEntries =

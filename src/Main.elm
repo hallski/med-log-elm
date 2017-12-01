@@ -173,7 +173,7 @@ viewWelcome =
 
 homeLinkButton : Html Msg
 homeLinkButton =
-    a [ class "navbar-brand", onClick OnGoHome ] [ text "MedLog" ]
+    a [ class "navbar-brand", onClick OnGoHome, href "" ] [ text "MedLog" ]
 
 loginButton : Model -> Html Msg
 loginButton model =
