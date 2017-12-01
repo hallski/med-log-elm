@@ -7,14 +7,12 @@ import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Json.Encode as Encode
 import Http
-import Time
 import HttpHelpers exposing (..)
-import Task
 import Model exposing (..)
 import Msg exposing (..)
+import AddNewEntry exposing (..)
+import Time
 
-backendUrl : String
-backendUrl = "http://localhost:9090"
 
 init : ( Model, Cmd Msg )
 init =
@@ -79,15 +77,6 @@ update msg model =
         NewEntryCancel ->
             ( { model | route = RootRoute }, Cmd.none )
 
-updateNewEntry : NewEntryFormMsg -> Entry -> Entry
-updateNewEntry msg newEntry =
-    case msg of
-        NewEntryHoursOfSleepChange value ->
-            { newEntry | hoursOfSleep = parseFloat value  }
-        NewEntryRestingPulseChange value ->
-            { newEntry | restingPulse = parseInt value }
-        NewEntryTagChange value ->
-            { newEntry | tag = value }
 
 handleHttpError : Http.Error -> Model -> Model
 handleHttpError error model =
@@ -106,17 +95,8 @@ handleHttpError error model =
         _ ->
             { model | user = Nothing }
 
-parseFloat : String -> Float
-parseFloat = Result.withDefault 0.0 << String.toFloat
-
-parseInt : String -> Int
-parseInt = Result.withDefault 0 << String.toInt
 
 -- Commands
-getTimestamp : Cmd Msg
-getTimestamp =
-    Task.perform NewEntryTimestamp Time.now
-
 getUser : Cmd Msg
 getUser =
     userDecoder
@@ -142,22 +122,6 @@ getEntries entries =
         |> getWithCredentials url
         |> Http.send NewEntries
 
-saveNewEntry : Entry -> Cmd Msg
-saveNewEntry entry =
-    let
-        body =
-            Encode.object
-                [ ("hoursOfSleep", Encode.float entry.hoursOfSleep)
-                , ("restingPulse", Encode.int entry.restingPulse)
-                , ("tag", Encode.string entry.tag)
-                , ("timestamp", Encode.int entry.timeStamp)
-                ]
-    in
-        saveNewEntryDecoder
-            |> postWithCredentials (backendUrl ++ "/entries") body
-            |> Http.send NewEntrySaveDone
-
-
 -- Decoders
 userDecoder : Decoder String
 userDecoder =
@@ -180,9 +144,6 @@ entryDecoder =
         (field "restingPulse" Decode.int)
         (field "timestamp" Decode.int)
 
-saveNewEntryDecoder : Decoder String
-saveNewEntryDecoder =
-    Decode.field "id" Decode.string
 
 -- View
 
@@ -289,67 +250,7 @@ loginButton model =
           , href (backendUrl ++ "/login") ]
           [ text "Login" ]
 
-viewNewEntry : Entry -> Html Msg
-viewNewEntry entry =
-    let
-        hoursOfSleepChangeMsg = NewEntryFormChange << NewEntryHoursOfSleepChange
-        restingPulseChangeMsg = NewEntryFormChange << NewEntryRestingPulseChange
-        tagChangeMsg = NewEntryFormChange << NewEntryTagChange
-    in
-        div [ class "container" ]
-            [ div [ class "display-4" ] [ text "Input your Info" ]
-                , viewSliderInput
-                    "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
-                    0 12 0.5 hoursOfSleepChangeMsg
-                , viewSliderInput
-                    "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
-                    40 110 1 restingPulseChangeMsg
-                , viewTextInput
-                    "Tag" "tag" entry.tag tagChangeMsg
-                , span [ class "float-left" ]
-                    [ a [ class "btn btn-secondary", onClick NewEntryCancel ]
-                        [ text "Cancel" ]
-                    ]
-                , span [ class "float-right" ]
-                    [ button [ class "btn btn-primary", onClick NewEntrySave ]
-                                [ text "Save" ]
-                    ]
-                ]
 
-
-viewTextInput : String -> String -> String -> (String -> msg) -> Html msg
-viewTextInput label n v onInputMsg =
-    div [ class "input-group" ]
-        [ span [ class "input-group-addon col-3 text-md-center" ] [ text label ]
-        , input
-            [ type_ "text"
-            , class "form-control col-9"
-            , name n
-            , value v
-            , onInput onInputMsg
-            ]
-            []
-        ]
-
-viewSliderInput : String -> String -> Float -> Float -> Float -> Float -> (String -> msg) -> Html msg
-viewSliderInput label n v minValue maxValue stepValue onInputMsg =
-    div [ class "input-group" ]
-        [ span [ class "input-group-addon col-3 text-md-center" ] [ text label ]
-        , div [ class "form-control col-9" ]
-              [ span [ style [ ("marginRight", "10px") ]] [ text (toString v) ]
-              , input
-                [ style [ ("width", "100%") ]
-                , type_ "range"
-                , Html.Attributes.min (toString minValue)
-                , Html.Attributes.max (toString maxValue)
-                , step (toString stepValue)
-                , name n
-                , value (toString v)
-                , onInput onInputMsg
-                ]
-                []
-              ]
-        ]
 
 viewPageLink : Int -> Int -> Html Msg
 viewPageLink index pageNo =

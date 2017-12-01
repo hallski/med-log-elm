@@ -1,6 +1,9 @@
 module Model exposing (..)
 
 
+backendUrl : String
+backendUrl = "http://localhost:9090"
+
 type Route
     = RootRoute
     | AddEntryRoute
