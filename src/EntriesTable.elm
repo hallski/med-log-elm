@@ -1,4 +1,4 @@
-module PageListEntries exposing (viewListEntries)
+module EntriesTable exposing (viewEntriesTable)
 
 import EntryModel exposing (Entry, Entries)
 
@@ -8,8 +8,8 @@ import Html.Events exposing (onClick)
 
 
 -- Views
-viewListEntries : msg -> (Int -> msg) -> Entries -> Html msg
-viewListEntries newEntryMsg pageSelMsg entries =
+viewEntriesTable : msg -> (Int -> msg) -> Entries -> Html msg
+viewEntriesTable newEntryMsg pageSelMsg entries =
     if List.length entries.entries == 0 then
         viewNoEntries newEntryMsg
     else

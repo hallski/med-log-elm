@@ -3,7 +3,7 @@ module MedLog exposing (..)
 import HttpHelpers exposing (..)
 import EntryModel exposing (..)
 import EntryForm
-import PageListEntries exposing (..)
+import EntriesTable exposing (..)
 
 import Json.Encode as Encode
 import Json.Decode as Decode exposing (Decoder, field, succeed)
@@ -235,7 +235,7 @@ view model =
                    if model.showNewEntryForm then
                        EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg model.newEntry
                    else
-                       viewListEntries OnNewEntry OnSetPage model.entries
+                       viewEntriesTable OnNewEntry OnSetPage model.entries
                else
                    viewWelcome
     in
