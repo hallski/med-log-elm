@@ -56,7 +56,7 @@ type Msg
     | OnSetPage Int
     | Logout
     | LogoutResult (Result Http.Error String)
-
+    -- New Entry Form
     | EntryFormMsg EntryForm.FormMsg
     | EntryFormCancel
     | EntryFormSave
@@ -67,31 +67,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        EntryFormMsg formMsg ->
-            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none)
-
-        EntryFormCancel ->
-            ( { model | showNewEntryForm = False }, Cmd.none ) -- IMPLEMENT
-
-        EntryFormSave ->
-            ( model, getTimestamp NewEntryTimestamp ) -- IMPLEMENT
-
-        NewEntryTimestamp time ->
-            let
-                timeStamp = round <| Time.inSeconds time
-                newEntry = model.newEntry
-                entry = { newEntry | timeStamp = timeStamp }
-            in
-                ( { model | newEntry = entry }
-                , saveNewEntry EntryFormSaveResult entry
-                )
-
-        EntryFormSaveResult (Ok id) ->
-            ( { model | showNewEntryForm = False }, getEntries GetEntriesResult model.entries )
-
-        EntryFormSaveResult (Err error) ->
-            ( handleHttpError error model, Cmd.none )
-
         Logout ->
             ( { model | user = Nothing }, logoutUser )
 
@@ -125,6 +100,32 @@ update msg model =
 
         OnNewEntry ->
             ( { model | showNewEntryForm = True, newEntry = defaultEntry }, Cmd.none )
+
+        -- New Entry Form
+        EntryFormMsg formMsg ->
+            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none)
+
+        EntryFormCancel ->
+            ( { model | showNewEntryForm = False }, Cmd.none ) -- IMPLEMENT
+
+        EntryFormSave ->
+            ( model, getTimestamp NewEntryTimestamp ) -- IMPLEMENT
+
+        NewEntryTimestamp time ->
+            let
+                timeStamp = round <| Time.inSeconds time
+                newEntry = model.newEntry
+                entry = { newEntry | timeStamp = timeStamp }
+            in
+                ( { model | newEntry = entry }
+                , saveNewEntry EntryFormSaveResult entry
+                )
+
+        EntryFormSaveResult (Ok id) ->
+            ( { model | showNewEntryForm = False }, getEntries GetEntriesResult model.entries )
+
+        EntryFormSaveResult (Err error) ->
+            ( handleHttpError error model, Cmd.none )
 
 
 handleHttpError : Http.Error -> Model -> Model
