@@ -1,6 +1,6 @@
 module PageListEntries exposing (viewListEntries)
 
-import Model exposing (Entry, Entries)
+import EntryModel exposing (Entry, Entries)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)

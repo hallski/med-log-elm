@@ -1,12 +1,4 @@
-module Model exposing (..)
-
-
-type alias Model =
-    { user : Maybe String
-    , entries : Entries
-    , showNewEntryForm : Bool
-    , newEntry : Entry
-    }
+module EntryModel exposing (..)
 
 
 type alias Entries =

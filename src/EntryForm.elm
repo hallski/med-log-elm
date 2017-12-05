@@ -4,7 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 
-import Model exposing (Entry)
+import EntryModel exposing (Entry)
 
 
 -- Update
@@ -28,14 +28,12 @@ update msg entry =
             { entry | tag = value }
 
 
-
 parseFloat : String -> Float
 parseFloat = Result.withDefault 0.0 << String.toFloat
 
 
 parseInt : String -> Int
 parseInt = Result.withDefault 0 << String.toInt
-
 
 
 -- Views
@@ -78,18 +76,18 @@ viewSliderInput label n v minValue maxValue stepValue onInputMsg =
 
 
 viewAddNewEntry : msg -> msg -> (FormMsg -> msg) -> Entry -> Html msg
-viewAddNewEntry saveMsg cancelMsg wrap entry =
+viewAddNewEntry saveMsg cancelMsg msgWrap entry =
     div [ class "container" ]
         [ div [ class "display-4" ]
               [ text "Input your Info" ]
         , viewSliderInput
             "Hours of sleep" "hoursOfSleep" entry.hoursOfSleep
-            0 12 0.5 (wrap << SetHoursOfSleep)
+            0 12 0.5 (msgWrap << SetHoursOfSleep)
         , viewSliderInput
             "Resting pulse" "restingPulse" (toFloat entry.restingPulse)
-            40 110 1 (wrap << SetRestingPulse)
+            40 110 1 (msgWrap << SetRestingPulse)
         , viewTextInput
-            "Tag" "tag" entry.tag (wrap << SetTag)
+            "Tag" "tag" entry.tag (msgWrap << SetTag)
         , span [ class "float-left" ]
                [ a [ class "btn btn-secondary"
                    , onClick cancelMsg

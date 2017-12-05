@@ -1,7 +1,7 @@
 module MedLog exposing (..)
 
 import HttpHelpers exposing (..)
-import Model exposing (..)
+import EntryModel exposing (..)
 import EntryForm
 import PageListEntries exposing (..)
 
@@ -19,6 +19,15 @@ import Task
 backendUrl : String
 backendUrl = "http://localhost:9090"
 
+
+-- Model
+
+type alias Model =
+    { user : Maybe String
+    , entries : Entries
+    , showNewEntryForm : Bool
+    , newEntry : Entry
+    }
 
 init : ( Model, Cmd Msg )
 init =
