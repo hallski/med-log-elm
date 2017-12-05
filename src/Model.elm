@@ -1,21 +1,10 @@
 module Model exposing (..)
 
 
--- For now, only use against server running on localhost.
-backendUrl : String
-backendUrl = "http://localhost:9090"
-
-
-type Route
-    = RootRoute
-    | AddEntryRoute
-    | NewEntryRoute
-
-
 type alias Model =
     { user : Maybe String
     , entries : Entries
-    , route : Route
+    , showNewEntryForm : Bool
     , newEntry : Entry
     }
 

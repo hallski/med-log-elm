@@ -43,9 +43,8 @@ urlWithQuery : String -> List (String, String) -> String
 urlWithQuery url params =
     let
         enc = Http.encodeUri
+        encodeParam = \(k, v) -> (enc k) ++ "=" ++ (enc v)
 
-        paramString =
-            params
-                |> String.join "&" << List.map (\(k, v) -> (enc k) ++ "=" ++ (enc v))
+        paramString = String.join "&" <| List.map encodeParam params
     in
         url ++ "?" ++ paramString

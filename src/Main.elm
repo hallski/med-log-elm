@@ -2,20 +2,28 @@ module MedLog exposing (..)
 
 import HttpHelpers exposing (..)
 import Model exposing (..)
-import Msg exposing (..)
-import PageAddNewEntry exposing (..)
+import EntryForm
 import PageListEntries exposing (..)
 
+import Json.Encode as Encode
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
 
+import Time
+import Task
+
+
+backendUrl : String
+backendUrl = "http://localhost:9090"
+
+
 init : ( Model, Cmd Msg )
 init =
     let
-        model = Model Nothing defaultEntries RootRoute defaultEntry
+        model = Model Nothing defaultEntries False defaultEntry
     in
         ( model, getUser )
 
@@ -31,22 +39,49 @@ isLoggedIn model =
 
 -- Update
 
+type Msg
+    = GetEntriesResult (Result Http.Error Entries)
+    | GetUserResult (Result Http.Error String)
+    | OnNewEntry
+    | NavigateHome
+    | OnSetPage Int
+    | Logout
+    | LogoutResult (Result Http.Error String)
+
+    | EntryFormMsg EntryForm.FormMsg
+    | EntryFormCancel
+    | EntryFormSave
+    | NewEntryTimestamp Time.Time
+    | EntryFormSaveResult (Result Http.Error String)
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SubAddEntry formMsg ->
+        EntryFormMsg formMsg ->
+            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none)
+
+        EntryFormCancel ->
+            ( { model | showNewEntryForm = False }, Cmd.none ) -- IMPLEMENT
+
+        EntryFormSave ->
+            ( model, getTimestamp NewEntryTimestamp ) -- IMPLEMENT
+
+        NewEntryTimestamp time ->
             let
-                ( newEntry, result ) =
-                    updateNewEntry formMsg model.newEntry
-
-                newModel = { model | newEntry = newEntry }
+                timeStamp = round <| Time.inSeconds time
+                newEntry = model.newEntry
+                entry = { newEntry | timeStamp = timeStamp }
             in
-                case result of
-                    Message msg ->
-                        update msg newModel
+                ( { model | newEntry = entry }
+                , saveNewEntry EntryFormSaveResult entry
+                )
 
-                    Command cmd ->
-                        (newModel, cmd)
+        EntryFormSaveResult (Ok id) ->
+            ( { model | showNewEntryForm = False }, getEntries GetEntriesResult model.entries )
+
+        EntryFormSaveResult (Err error) ->
+            ( handleHttpError error model, Cmd.none )
 
         Logout ->
             ( { model | user = Nothing }, logoutUser )
@@ -58,7 +93,7 @@ update msg model =
             ( handleHttpError error model, Cmd.none )
 
         GetUserResult (Ok username) ->
-            ( { model | user = Just username }, getEntries model.entries )
+            ( { model | user = Just username }, getEntries GetEntriesResult model.entries )
 
         GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
@@ -70,23 +105,17 @@ update msg model =
             ( handleHttpError error model, Cmd.none)
 
         NavigateHome ->
-            ( { model | route = RootRoute }, Cmd.none )
+            ( { model | showNewEntryForm = False }, Cmd.none )
 
         OnSetPage page ->
             let
                 oldEntries = model.entries
                 entries = { oldEntries | pageNo = page }
             in
-                ( { model | entries = entries }, getEntries entries )
+                ( { model | entries = entries }, getEntries GetEntriesResult entries )
 
         OnNewEntry ->
-            ( { model | route = NewEntryRoute, newEntry = defaultEntry }, Cmd.none )
-
-        NewEntryDone entryAdded ->
-            let
-                cmd = if entryAdded then getEntries model.entries else Cmd.none
-            in
-                ( { model | route = RootRoute }, cmd )
+            ( { model | showNewEntryForm = True, newEntry = defaultEntry }, Cmd.none )
 
 
 handleHttpError : Http.Error -> Model -> Model
@@ -123,8 +152,8 @@ logoutUser =
         |> Http.send LogoutResult
 
 
-getEntries : Entries -> Cmd Msg
-getEntries entries =
+getEntries : (Result Http.Error Entries -> Msg) -> Entries -> Cmd Msg
+getEntries msg entries =
     let
         params = [ ("pageSize", toString entries.pageSize)
                  , ("pageNo", toString entries.pageNo)
@@ -134,8 +163,33 @@ getEntries entries =
 
     resultsDecoder
         |> getWithCredentials url
-        |> Http.send GetEntriesResult
+        |> Http.send msg
 
+
+getTimestamp : (Time.Time -> Msg) -> Cmd Msg
+getTimestamp msg =
+    Task.perform msg Time.now
+
+
+saveNewEntry : (Result Http.Error String -> Msg) -> Entry -> Cmd Msg
+saveNewEntry msg entry =
+    let
+        body =
+            Encode.object
+                [ ("hoursOfSleep", Encode.float entry.hoursOfSleep)
+                , ("restingPulse", Encode.int entry.restingPulse)
+                , ("tag", Encode.string entry.tag)
+                , ("timestamp", Encode.int entry.timeStamp)
+                ]
+    in
+        saveNewEntryDecoder
+            |> postWithCredentials (backendUrl ++ "/entries") body
+            |> Http.send msg
+
+
+saveNewEntryDecoder : Decoder String
+saveNewEntryDecoder =
+    Decode.field "id" Decode.string
 
 -- Decoders
 
@@ -147,7 +201,7 @@ userDecoder =
 resultsDecoder : Decoder (Entries)
 resultsDecoder =
     Decode.map4 Entries
-        (field "results" (Decode.list entryDecoder))
+        (field "results" <| Decode.list entryDecoder)
         (field "pageNo" Decode.int)
         (field "pageSize" Decode.int)
         (field "pageCount" Decode.int)
@@ -169,10 +223,10 @@ view : Model -> Html Msg
 view model =
     let
         page = if isLoggedIn model then
-                   if model.route == RootRoute then
-                       viewListEntries model.entries
+                   if model.showNewEntryForm then
+                       EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg model.newEntry
                    else
-                       viewAddNewEntry model.newEntry
+                       viewListEntries OnNewEntry OnSetPage model.entries
                else
                    viewWelcome
     in

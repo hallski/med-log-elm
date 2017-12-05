@@ -1,7 +1,6 @@
 module PageListEntries exposing (viewListEntries)
 
 import Model exposing (Entry, Entries)
-import Msg exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -9,55 +8,55 @@ import Html.Events exposing (onClick)
 
 
 -- Views
-viewListEntries : Entries -> Html Msg
-viewListEntries entries =
+viewListEntries : msg -> (Int -> msg) -> Entries -> Html msg
+viewListEntries newEntryMsg pageSelMsg entries =
     if List.length entries.entries == 0 then
-        viewNoEntries
+        viewNoEntries newEntryMsg
     else
-        viewShowEntries entries
+        viewShowEntries newEntryMsg pageSelMsg entries
 
 
-viewPageSelector : Entries -> Html Msg
-viewPageSelector entries =
+viewPageSelector : (Int -> msg) -> Entries -> Html msg
+viewPageSelector pageSelMsg entries =
     let
         pageLinks = List.range 1 entries.pageCount
-                        |> List.map (viewPageLink entries.pageNo)
+                        |> List.map (viewPageLink pageSelMsg entries.pageNo)
     in
         ul [ class "nav pagination" ] pageLinks
 
 
-viewPageLink : Int -> Int -> Html Msg
-viewPageLink index pageNo =
+viewPageLink : (Int -> msg) -> Int -> Int -> Html msg
+viewPageLink pageSelMsg index pageNo =
     let
         class_ = "page-item" ++ if index == pageNo then " active" else ""
     in
         li [ class class_ ]
-           [ a [ class "page-link", onClick (OnSetPage pageNo) ]
+           [ a [ class "page-link", onClick (pageSelMsg pageNo) ]
                [ text (toString pageNo) ]
            ]
 
 
-viewNoEntries : Html Msg
-viewNoEntries =
+viewNoEntries : msg -> Html msg
+viewNoEntries newEntryMsg =
     div [ class "jumbotron" ]
         [ div [ class "display-5 text-center" ] [ text "You have not made any log entries yet!" ]
         , div [ class "text-center" ]
-              [ button [ type_ "button", class "btn btn-primary", onClick OnNewEntry ]
+              [ button [ type_ "button", class "btn btn-primary", onClick newEntryMsg ]
                        [ text "Add your first log-entry!" ]
               ]
         ]
 
 
-viewShowEntries : Entries -> Html Msg
-viewShowEntries entries =
+viewShowEntries : msg -> (Int -> msg) -> Entries -> Html msg
+viewShowEntries newEntryMsg pageSelMsg entries =
     div []
         [ nav [ class "navbar nav-fill justify-content-between"]
-              [ viewPageSelector entries
+              [ viewPageSelector pageSelMsg entries
               , ul [ class "nav nav-pills" ]
                    [ li [ class "nav-item" ]
                         [ button [ type_ "button"
                                  , class "btn btn-outline-secondary"
-                                 , onClick OnNewEntry
+                                 , onClick newEntryMsg
                                  ]
                                  [ text "Add New" ]
                         ]
@@ -67,7 +66,7 @@ viewShowEntries entries =
         ]
 
 
-viewEntryTable : List Entry -> Html Msg
+viewEntryTable : List Entry -> Html msg
 viewEntryTable entries =
     let
         headers = [ "Hours of sleep"
@@ -83,11 +82,11 @@ viewEntryTable entries =
         table [ class "table" ] rows
 
 
-viewEntryRow : Entry -> Html Msg
+viewEntryRow : Entry -> Html msg
 viewEntryRow entry =
     tr []
-       [ td [] [ text (toString entry.hoursOfSleep) ]
-       , td [] [ text (toString entry.restingPulse) ]
+       [ td [] [ text <| toString entry.hoursOfSleep ]
+       , td [] [ text <| toString entry.restingPulse ]
        , td [] [ text entry.tag ]
-       , td [] [ text (toString entry.timeStamp) ]
+       , td [] [ text <| toString entry.timeStamp ]
        ]
