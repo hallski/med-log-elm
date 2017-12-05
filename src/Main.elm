@@ -170,10 +170,9 @@ getEntries msg entries =
                  ]
         url = urlWithQuery (backendUrl ++ "/entries") params
     in
-
-    resultsDecoder
-        |> getWithCredentials url
-        |> Http.send msg
+        resultsDecoder
+          |> getWithCredentials url
+          |> Http.send msg
 
 
 getTimestamp : (Time.Time -> Msg) -> Cmd Msg
