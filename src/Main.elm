@@ -105,10 +105,10 @@ update msg model =
             ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none)
 
         EntryFormCancel ->
-            ( { model | showNewEntryForm = False }, Cmd.none ) -- IMPLEMENT
+            ( { model | showNewEntryForm = False }, Cmd.none )
 
         EntryFormSave ->
-            ( model, getTimestamp NewEntryTimestamp ) -- IMPLEMENT
+            ( model, getTimestamp NewEntryTimestamp )
 
         NewEntryTimestamp time ->
             let
