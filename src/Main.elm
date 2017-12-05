@@ -1,19 +1,18 @@
 module MedLog exposing (..)
 
-import HttpHelpers exposing (..)
-import EntryModel exposing (..)
-import EntryForm
 import EntriesTable exposing (..)
+import EntryForm
+import EntryModel exposing (..)
+import HttpHelpers exposing (..)
 
-import Json.Encode as Encode
 import Json.Decode as Decode exposing (Decoder, field, succeed)
+import Json.Encode as Encode
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
-
-import Time
 import Task
+import Time
 
 
 backendUrl : String

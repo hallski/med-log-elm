@@ -1,10 +1,10 @@
 module EntryForm exposing (FormMsg, update, viewAddNewEntry)
 
+import EntryModel exposing (Entry)
+
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
-
-import EntryModel exposing (Entry)
 
 
 -- Update
