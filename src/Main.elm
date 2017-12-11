@@ -23,11 +23,19 @@ backendUrl =
 -- Model
 
 
+type alias User =
+    String
+
+
+type State
+    = NotLoggedIn
+    | ShowingEntries
+    | ShowingEntryForm Entry
+
+
 type alias Model =
-    { user : Maybe String
+    { state : State
     , entries : Entries
-    , showNewEntryForm : Bool
-    , newEntry : Entry
     }
 
 
@@ -35,19 +43,9 @@ init : ( Model, Cmd Msg )
 init =
     let
         model =
-            Model Nothing defaultEntries False defaultEntry
+            Model NotLoggedIn defaultEntries
     in
         ( model, getUser )
-
-
-isLoggedIn : Model -> Bool
-isLoggedIn model =
-    case model.user of
-        Just _ ->
-            True
-
-        Nothing ->
-            False
 
 
 
@@ -74,28 +72,33 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Logout ->
-            ( { model | user = Nothing }, logoutUser )
+            model ! [ logoutUser ]
 
         GetEntriesResult (Ok entries) ->
-            ( { model | entries = entries }, Cmd.none )
+            ( { model | state = ShowingEntries, entries = entries }, Cmd.none )
 
         GetEntriesResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         GetUserResult (Ok username) ->
-            ( { model | user = Just username }, getEntries GetEntriesResult model.entries )
+            ( { model | state = ShowingEntries }, getEntries GetEntriesResult model.entries )
 
         GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         LogoutResult (Ok username) ->
-            ( { model | user = Just username }, Cmd.none )
+            { model | state = NotLoggedIn } ! []
 
         LogoutResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         NavigateHome ->
-            ( { model | showNewEntryForm = False }, Cmd.none )
+            case model.state of
+                ShowingEntryForm entry ->
+                    { model | state = ShowingEntries } ! [ getEntries GetEntriesResult model.entries ]
+
+                _ ->
+                    model ! []
 
         OnSetPage page ->
             let
@@ -108,14 +111,19 @@ update msg model =
                 ( { model | entries = entries }, getEntries GetEntriesResult entries )
 
         OnNewEntry ->
-            ( { model | showNewEntryForm = True, newEntry = defaultEntry }, Cmd.none )
+            ( { model | state = ShowingEntryForm defaultEntry }, Cmd.none )
 
         -- New Entry Form
         EntryFormMsg formMsg ->
-            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none )
+            case model.state of
+                ShowingEntryForm entry ->
+                    { model | state = ShowingEntryForm <| EntryForm.update formMsg entry } ! []
+
+                _ ->
+                    model ! []
 
         EntryFormCancel ->
-            ( { model | showNewEntryForm = False }, Cmd.none )
+            ( { model | state = ShowingEntries }, Cmd.none )
 
         EntryFormSave ->
             ( model, getTimestamp NewEntryTimestamp )
@@ -126,17 +134,22 @@ update msg model =
                     round <| Time.inSeconds time
 
                 newEntry =
-                    model.newEntry
+                    case model.state of
+                        ShowingEntryForm entry ->
+                            entry
+
+                        _ ->
+                            defaultEntry
 
                 entry =
                     { newEntry | timeStamp = timeStamp }
             in
-                ( { model | newEntry = entry }
+                ( { model | state = ShowingEntryForm entry }
                 , saveNewEntry EntryFormSaveResult entry
                 )
 
         EntryFormSaveResult (Ok id) ->
-            ( { model | showNewEntryForm = False }, getEntries GetEntriesResult model.entries )
+            ( { model | state = ShowingEntries }, getEntries GetEntriesResult model.entries )
 
         EntryFormSaveResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
@@ -150,17 +163,17 @@ handleHttpError error model =
                 _ =
                     Debug.log "Error: " msg
             in
-                { model | user = Nothing }
+                { model | state = NotLoggedIn }
 
         Http.BadPayload msg _ ->
             let
                 _ =
                     Debug.log "Error: " msg
             in
-                { model | user = Nothing }
+                { model | state = NotLoggedIn }
 
         _ ->
-            { model | user = Nothing }
+            { model | state = NotLoggedIn }
 
 
 
@@ -259,13 +272,15 @@ view : Model -> Html Msg
 view model =
     let
         page =
-            if isLoggedIn model then
-                if model.showNewEntryForm then
-                    EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg model.newEntry
-                else
+            case model.state of
+                NotLoggedIn ->
+                    viewWelcome
+
+                ShowingEntries ->
                     viewEntriesTable OnNewEntry OnSetPage model.entries
-            else
-                viewWelcome
+
+                ShowingEntryForm entry ->
+                    EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg entry
     in
         div [ class "container-fluid" ]
             [ nav [ class "navbar navbar-dark bg-dark" ]
@@ -298,18 +313,20 @@ homeLinkButton =
 
 loginButton : Model -> Html Msg
 loginButton model =
-    if isLoggedIn model then
-        button
-            [ class "btn btn-outline-secondary my-2 my-sm-0"
-            , onClick Logout
-            ]
-            [ text "Logout" ]
-    else
-        a
-            [ class "btn btn-success my-2 my-sm-0"
-            , href (backendUrl ++ "/login")
-            ]
-            [ text "Login" ]
+    case model.state of
+        NotLoggedIn ->
+            a
+                [ class "btn btn-success my-2 my-sm-0"
+                , href (backendUrl ++ "/login")
+                ]
+                [ text "Login" ]
+
+        _ ->
+            button
+                [ class "btn btn-outline-secondary my-2 my-sm-0"
+                , onClick Logout
+                ]
+                [ text "Logout" ]
 
 
 
