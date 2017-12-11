@@ -4,7 +4,6 @@ import EntriesTable exposing (..)
 import EntryForm
 import EntryModel exposing (..)
 import HttpHelpers exposing (..)
-
 import Json.Decode as Decode exposing (Decoder, field, succeed)
 import Json.Encode as Encode
 import Html exposing (..)
@@ -16,10 +15,13 @@ import Time
 
 
 backendUrl : String
-backendUrl = "http://localhost:9090"
+backendUrl =
+    "http://localhost:9090"
+
 
 
 -- Model
+
 
 type alias Model =
     { user : Maybe String
@@ -28,10 +30,12 @@ type alias Model =
     , newEntry : Entry
     }
 
+
 init : ( Model, Cmd Msg )
 init =
     let
-        model = Model Nothing defaultEntries False defaultEntry
+        model =
+            Model Nothing defaultEntries False defaultEntry
     in
         ( model, getUser )
 
@@ -41,11 +45,14 @@ isLoggedIn model =
     case model.user of
         Just _ ->
             True
+
         Nothing ->
             False
 
 
+
 -- Update
+
 
 type Msg
     = GetEntriesResult (Result Http.Error Entries)
@@ -55,7 +62,7 @@ type Msg
     | OnSetPage Int
     | Logout
     | LogoutResult (Result Http.Error String)
-    -- New Entry Form
+      -- New Entry Form
     | EntryFormMsg EntryForm.FormMsg
     | EntryFormCancel
     | EntryFormSave
@@ -85,15 +92,18 @@ update msg model =
             ( { model | user = Just username }, Cmd.none )
 
         LogoutResult (Err error) ->
-            ( handleHttpError error model, Cmd.none)
+            ( handleHttpError error model, Cmd.none )
 
         NavigateHome ->
             ( { model | showNewEntryForm = False }, Cmd.none )
 
         OnSetPage page ->
             let
-                oldEntries = model.entries
-                entries = { oldEntries | pageNo = page }
+                oldEntries =
+                    model.entries
+
+                entries =
+                    { oldEntries | pageNo = page }
             in
                 ( { model | entries = entries }, getEntries GetEntriesResult entries )
 
@@ -102,7 +112,7 @@ update msg model =
 
         -- New Entry Form
         EntryFormMsg formMsg ->
-            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none)
+            ( { model | newEntry = EntryForm.update formMsg model.newEntry }, Cmd.none )
 
         EntryFormCancel ->
             ( { model | showNewEntryForm = False }, Cmd.none )
@@ -112,9 +122,14 @@ update msg model =
 
         NewEntryTimestamp time ->
             let
-                timeStamp = round <| Time.inSeconds time
-                newEntry = model.newEntry
-                entry = { newEntry | timeStamp = timeStamp }
+                timeStamp =
+                    round <| Time.inSeconds time
+
+                newEntry =
+                    model.newEntry
+
+                entry =
+                    { newEntry | timeStamp = timeStamp }
             in
                 ( { model | newEntry = entry }
                 , saveNewEntry EntryFormSaveResult entry
@@ -132,20 +147,25 @@ handleHttpError error model =
     case error of
         Http.BadStatus msg ->
             let
-                _ = Debug.log "Error: " msg
+                _ =
+                    Debug.log "Error: " msg
             in
                 { model | user = Nothing }
 
         Http.BadPayload msg _ ->
             let
-                _ = Debug.log "Error: " msg
+                _ =
+                    Debug.log "Error: " msg
             in
                 { model | user = Nothing }
+
         _ ->
             { model | user = Nothing }
 
 
+
 -- Commands
+
 
 getUser : Cmd Msg
 getUser =
@@ -164,14 +184,17 @@ logoutUser =
 getEntries : (Result Http.Error Entries -> Msg) -> Entries -> Cmd Msg
 getEntries msg entries =
     let
-        params = [ ("pageSize", toString entries.pageSize)
-                 , ("pageNo", toString entries.pageNo)
-                 ]
-        url = urlWithQuery (backendUrl ++ "/entries") params
+        params =
+            [ ( "pageSize", toString entries.pageSize )
+            , ( "pageNo", toString entries.pageNo )
+            ]
+
+        url =
+            urlWithQuery (backendUrl ++ "/entries") params
     in
         resultsDecoder
-          |> getWithCredentials url
-          |> Http.send msg
+            |> getWithCredentials url
+            |> Http.send msg
 
 
 getTimestamp : (Time.Time -> Msg) -> Cmd Msg
@@ -184,10 +207,10 @@ saveNewEntry msg entry =
     let
         body =
             Encode.object
-                [ ("hoursOfSleep", Encode.float entry.hoursOfSleep)
-                , ("restingPulse", Encode.int entry.restingPulse)
-                , ("tag", Encode.string entry.tag)
-                , ("timestamp", Encode.int entry.timeStamp)
+                [ ( "hoursOfSleep", Encode.float entry.hoursOfSleep )
+                , ( "restingPulse", Encode.int entry.restingPulse )
+                , ( "tag", Encode.string entry.tag )
+                , ( "timestamp", Encode.int entry.timeStamp )
                 ]
     in
         saveNewEntryDecoder
@@ -199,14 +222,17 @@ saveNewEntryDecoder : Decoder String
 saveNewEntryDecoder =
     Decode.field "id" Decode.string
 
+
+
 -- Decoders
+
 
 userDecoder : Decoder String
 userDecoder =
     Decode.field "user" Decode.string
 
 
-resultsDecoder : Decoder (Entries)
+resultsDecoder : Decoder Entries
 resultsDecoder =
     Decode.map4 Entries
         (field "results" <| Decode.list entryDecoder)
@@ -225,61 +251,70 @@ entryDecoder =
         (field "timestamp" Decode.int)
 
 
+
 -- View
+
 
 view : Model -> Html Msg
 view model =
     let
-        page = if isLoggedIn model then
-                   if model.showNewEntryForm then
-                       EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg model.newEntry
-                   else
-                       viewEntriesTable OnNewEntry OnSetPage model.entries
-               else
-                   viewWelcome
+        page =
+            if isLoggedIn model then
+                if model.showNewEntryForm then
+                    EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg model.newEntry
+                else
+                    viewEntriesTable OnNewEntry OnSetPage model.entries
+            else
+                viewWelcome
     in
-       div [ class "container-fluid" ]
-           [ nav [ class "navbar navbar-dark bg-dark" ]
-                 [ homeLinkButton
-                 , loginButton model
-                 ]
-           , page
-           ]
+        div [ class "container-fluid" ]
+            [ nav [ class "navbar navbar-dark bg-dark" ]
+                [ homeLinkButton
+                , loginButton model
+                ]
+            , page
+            ]
 
 
 viewWelcome : Html Msg
 viewWelcome =
     div [ class "container" ]
         [ div [ class "jumbotron" ]
-              [ p [ class "display-4" ]
-                  [ text "Welcome" ]
-              , p []
-                  [ text "This is the MedLog demo application." ]
-              , p []
-                  [ text "Please sign in with your google account to proceed" ]
-              ]
+            [ p [ class "display-4" ]
+                [ text "Welcome" ]
+            , p []
+                [ text "This is the MedLog demo application." ]
+            , p []
+                [ text "Please sign in with your google account to proceed" ]
+            ]
         ]
 
 
 homeLinkButton : Html Msg
 homeLinkButton =
     a [ class "navbar-brand", onClick NavigateHome, href "" ]
-      [ text "MedLog" ]
+        [ text "MedLog" ]
 
 
 loginButton : Model -> Html Msg
 loginButton model =
     if isLoggedIn model then
-        button [ class "btn btn-outline-secondary my-2 my-sm-0"
-               , onClick Logout ]
-               [ text "Logout" ]
+        button
+            [ class "btn btn-outline-secondary my-2 my-sm-0"
+            , onClick Logout
+            ]
+            [ text "Logout" ]
     else
-        a [ class "btn btn-success my-2 my-sm-0"
-          , href (backendUrl ++ "/login") ]
-          [ text "Login" ]
+        a
+            [ class "btn btn-success my-2 my-sm-0"
+            , href (backendUrl ++ "/login")
+            ]
+            [ text "Login" ]
+
 
 
 -- Main
+
 
 main : Program Never Model Msg
 main =

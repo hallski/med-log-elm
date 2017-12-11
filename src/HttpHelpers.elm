@@ -8,22 +8,24 @@ import Json.Encode as Encode exposing (Value)
 requestWithCredentials : String -> String -> Decoder a -> Http.Request a
 requestWithCredentials method url decoder =
     Http.request
-    { method = method
-    , headers = []
-    , url = url
-    , body = Http.emptyBody
-    , expect = Http.expectJson decoder
-    , timeout = Nothing
-    , withCredentials = True
-    }
+        { method = method
+        , headers = []
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectJson decoder
+        , timeout = Nothing
+        , withCredentials = True
+        }
 
 
 getWithCredentials : String -> Decoder a -> Http.Request a
-getWithCredentials = requestWithCredentials "GET"
+getWithCredentials =
+    requestWithCredentials "GET"
 
 
 deleteWithCredentials : String -> Decoder a -> Http.Request a
-deleteWithCredentials = requestWithCredentials "DELETE"
+deleteWithCredentials =
+    requestWithCredentials "DELETE"
 
 
 postWithCredentials : String -> Encode.Value -> Decoder a -> Http.Request a
@@ -39,12 +41,16 @@ postWithCredentials url body decoder =
         }
 
 
-urlWithQuery : String -> List (String, String) -> String
+urlWithQuery : String -> List ( String, String ) -> String
 urlWithQuery url params =
     let
-        enc = Http.encodeUri
-        encodeParam = \(k, v) -> (enc k) ++ "=" ++ (enc v)
+        enc =
+            Http.encodeUri
 
-        paramString = String.join "&" <| List.map encodeParam params
+        encodeParam =
+            \( k, v ) -> (enc k) ++ "=" ++ (enc v)
+
+        paramString =
+            String.join "&" <| List.map encodeParam params
     in
         url ++ "?" ++ paramString

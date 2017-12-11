@@ -2,10 +2,10 @@ module EntryModel exposing (..)
 
 
 type alias Entries =
-    { entries: List Entry
-    , pageNo: Int
-    , pageSize: Int
-    , pageCount: Int
+    { entries : List Entry
+    , pageNo : Int
+    , pageSize : Int
+    , pageCount : Int
     }
 
 
@@ -15,7 +15,7 @@ defaultEntries =
 
 
 type alias Entry =
-    { id: String
+    { id : String
     , hoursOfSleep : Float
     , tag : String
     , restingPulse : Int
