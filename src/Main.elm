@@ -27,14 +27,14 @@ type alias User =
     String
 
 
-type State
-    = NotLoggedIn
-    | ShowingEntries
-    | ShowingEntryForm Entry
+type View
+    = ShowNotLoggedIn
+    | ShowEntries
+    | ShowEntryForm Entry
 
 
 type alias Model =
-    { state : State
+    { view : View
     , entries : Entries
     }
 
@@ -43,7 +43,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         model =
-            Model NotLoggedIn defaultEntries
+            Model ShowNotLoggedIn defaultEntries
     in
         ( model, getUser )
 
@@ -75,27 +75,27 @@ update msg model =
             model ! [ logoutUser ]
 
         GetEntriesResult (Ok entries) ->
-            ( { model | state = ShowingEntries, entries = entries }, Cmd.none )
+            ( { model | view = ShowEntries, entries = entries }, Cmd.none )
 
         GetEntriesResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         GetUserResult (Ok username) ->
-            ( { model | state = ShowingEntries }, getEntries GetEntriesResult model.entries )
+            ( { model | view = ShowEntries }, getEntries GetEntriesResult model.entries )
 
         GetUserResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         LogoutResult (Ok username) ->
-            { model | state = NotLoggedIn } ! []
+            { model | view = ShowNotLoggedIn } ! []
 
         LogoutResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
 
         NavigateHome ->
-            case model.state of
-                ShowingEntryForm entry ->
-                    { model | state = ShowingEntries } ! [ getEntries GetEntriesResult model.entries ]
+            case model.view of
+                ShowEntryForm entry ->
+                    { model | view = ShowEntries } ! [ getEntries GetEntriesResult model.entries ]
 
                 _ ->
                     model ! []
@@ -111,19 +111,19 @@ update msg model =
                 ( { model | entries = entries }, getEntries GetEntriesResult entries )
 
         OnNewEntry ->
-            ( { model | state = ShowingEntryForm defaultEntry }, Cmd.none )
+            ( { model | view = ShowEntryForm defaultEntry }, Cmd.none )
 
         -- New Entry Form
         EntryFormMsg formMsg ->
-            case model.state of
-                ShowingEntryForm entry ->
-                    { model | state = ShowingEntryForm <| EntryForm.update formMsg entry } ! []
+            case model.view of
+                ShowEntryForm entry ->
+                    { model | view = ShowEntryForm <| EntryForm.update formMsg entry } ! []
 
                 _ ->
                     model ! []
 
         EntryFormCancel ->
-            ( { model | state = ShowingEntries }, Cmd.none )
+            ( { model | view = ShowEntries }, Cmd.none )
 
         EntryFormSave ->
             ( model, getTimestamp NewEntryTimestamp )
@@ -134,8 +134,8 @@ update msg model =
                     round <| Time.inSeconds time
 
                 newEntry =
-                    case model.state of
-                        ShowingEntryForm entry ->
+                    case model.view of
+                        ShowEntryForm entry ->
                             entry
 
                         _ ->
@@ -144,12 +144,12 @@ update msg model =
                 entry =
                     { newEntry | timeStamp = timeStamp }
             in
-                ( { model | state = ShowingEntryForm entry }
+                ( { model | view = ShowEntryForm entry }
                 , saveNewEntry EntryFormSaveResult entry
                 )
 
         EntryFormSaveResult (Ok id) ->
-            ( { model | state = ShowingEntries }, getEntries GetEntriesResult model.entries )
+            ( { model | view = ShowEntries }, getEntries GetEntriesResult model.entries )
 
         EntryFormSaveResult (Err error) ->
             ( handleHttpError error model, Cmd.none )
@@ -163,17 +163,17 @@ handleHttpError error model =
                 _ =
                     Debug.log "Error: " msg
             in
-                { model | state = NotLoggedIn }
+                { model | view = ShowNotLoggedIn }
 
         Http.BadPayload msg _ ->
             let
                 _ =
                     Debug.log "Error: " msg
             in
-                { model | state = NotLoggedIn }
+                { model | view = ShowNotLoggedIn }
 
         _ ->
-            { model | state = NotLoggedIn }
+            { model | view = ShowNotLoggedIn }
 
 
 
@@ -272,14 +272,14 @@ view : Model -> Html Msg
 view model =
     let
         page =
-            case model.state of
-                NotLoggedIn ->
+            case model.view of
+                ShowNotLoggedIn ->
                     viewWelcome
 
-                ShowingEntries ->
+                ShowEntries ->
                     viewEntriesTable OnNewEntry OnSetPage model.entries
 
-                ShowingEntryForm entry ->
+                ShowEntryForm entry ->
                     EntryForm.viewAddNewEntry EntryFormSave EntryFormCancel EntryFormMsg entry
     in
         div [ class "container-fluid" ]
@@ -313,8 +313,8 @@ homeLinkButton =
 
 loginButton : Model -> Html Msg
 loginButton model =
-    case model.state of
-        NotLoggedIn ->
+    case model.view of
+        ShowNotLoggedIn ->
             a
                 [ class "btn btn-success my-2 my-sm-0"
                 , href (backendUrl ++ "/login")
